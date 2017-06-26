@@ -164,24 +164,5 @@ namespace Core.Storage
             return serializedArguments.ToArray();
         }
 
-
-        //internal static bool ParseDateTimeArgument(string argument, out DateTime value)
-        //{
-        //    DateTime dateTime;
-        //    var result = DateTime.TryParse(argument, out dateTime);
-
-        //    if (!result)
-        //    {
-        //        result = DateTime.TryParseExact(
-        //            argument,
-        //            "MM/dd/yyyy HH:mm:ss.ffff",
-        //            CultureInfo.CurrentCulture,
-        //            DateTimeStyles.None,
-        //            out dateTime);
-        //    }
-
-        //    value = dateTime;
-        //    return result;
-        //}
     }
 }

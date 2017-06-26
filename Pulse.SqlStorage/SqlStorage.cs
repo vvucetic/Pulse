@@ -2,6 +2,7 @@
 using Core.Exceptions;
 using Core.Storage;
 using NPoco;
+using Pulse.SqlStorage.Entities;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Pulse.SqlStorage
 {
-    public class SqlStorage : Storage
+    public class SqlStorage : DataStorage
     {
         private readonly string _connectionStringName;
 
@@ -29,7 +30,7 @@ namespace Pulse.SqlStorage
 set transaction isolation level read committed
 update top (1) q
 set FetchedAt = GETUTCDATE()
-output INSERTED.Id as QueueJobId, INSERTED.JobId, INSERTED.Queue
+output INSERTED.Id as QueueJobId, INSERTED.JobId, INSERTED.Queue, INSERTED.FetchedAt
 from JobQueue q with (readpast, updlock, rowlock, forceseek)
 where Queue = @0 and
 (FetchedAt is null or FetchedAt < DATEADD(second, @1, GETUTCDATE()))";
@@ -39,17 +40,58 @@ where Queue = @0 and
                 if (fetchedJob == null)
                     return null;
 
-                var job = db.FirstOrDefault<JobEntity>("SELECT [Id],[State],[InvocationData],[Arguments],[CreatedAt],[NextJobs],[ContextId],[NumberOfConditionJobs] FROM Job WHERE Id = @0", fetchedJob.JobId);
-                if (job == null)
+                var jobEntity = db.FirstOrDefault<JobEntity>("SELECT [Id],[State],[InvocationData],[Arguments],[CreatedAt],[NextJobs],[ContextId],[NumberOfConditionJobs] FROM Job WHERE Id = @0", fetchedJob.JobId);
+                if (jobEntity == null)
                     throw new InternalErrorException("Job not found after fetched from queue.");
 
-                var invocationData = JobHelper.FromJson<InvocationData>(job.InvocationData);
+                var invocationData = JobHelper.FromJson<InvocationData>(jobEntity.InvocationData);
+                var nextJobs = JobHelper.FromJson<List<int>>(jobEntity.NextJobs);
                 return new QueueJob()
                 {
-                    JobId = job.Id,
+                    JobId = jobEntity.Id,
+                    QueueJobId = fetchedJob.QueueJobId,
                     QueueName = fetchedJob.Queue,
-                    Job = invocationData.Deserialize()
+                    Job = invocationData.Deserialize(),
+                    ContextId = jobEntity.ContextId,
+                    NextJobs = nextJobs,
+                    NumberOfConditionJobs = jobEntity.NumberOfConditionJobs,
+                    FetchedAt = fetchedJob.FetchedAt,
+                    CreatedAt = jobEntity.CreatedAt
                 };
+            }
+        }
+
+        public override int CreateAndEnqueue(QueueJob queueJob)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    var insertedJob = new JobEntity()
+                    {
+                        ContextId = queueJob.ContextId,
+                        CreatedAt = DateTime.UtcNow,
+                        InvocationData = JobHelper.ToJson(InvocationData.Serialize(queueJob.Job)),
+                        NextJobs = JobHelper.ToJson(queueJob.NextJobs),
+                        NumberOfConditionJobs = queueJob.NumberOfConditionJobs
+                    };
+                    db.Insert<JobEntity>(insertedJob);
+                    db.Insert<StateEntity>(new StateEntity() {
+                        CreatedAt = DateTime.UtcNow,
+                        JobId = insertedJob.Id,
+                        Name = "Enqueued",
+                        Reason = null,
+                        Data = null
+                    });
+                    var insertedQueueItem = new QueueEntity()
+                    {
+                        JobId = insertedJob.Id,
+                        Queue = queueJob.QueueName
+                    };
+                    db.Insert<QueueEntity>(insertedQueueItem);
+                    tran.Complete();
+                    return insertedJob.Id;
+                }
             }
         }
 

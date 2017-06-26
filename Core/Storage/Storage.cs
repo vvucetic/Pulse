@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Core.Storage
 {
-    public abstract class Storage
+    public abstract class DataStorage
     {
         public virtual void Dispose()
         {
@@ -19,5 +19,7 @@ namespace Core.Storage
         //public abstract void GetJobData(string jobId);
 
         public abstract QueueJob FetchNextJob(string queue);
+
+        public abstract int CreateAndEnqueue(QueueJob queueJob);
     }
 }

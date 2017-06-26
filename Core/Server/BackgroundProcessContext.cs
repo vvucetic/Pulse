@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Core.Storage;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,9 +12,12 @@ namespace Core.Server
     {
         public CancellationToken CancellationToken { get; }
 
-        public BackgroundProcessContext(CancellationToken cancellationToken)
-        {
+        public DataStorage Storage { get; }
 
+        public BackgroundProcessContext(CancellationToken cancellationToken, DataStorage storage)
+        {
+            this.CancellationToken = cancellationToken;
+            this.Storage = storage;
         }
 
         public bool IsShutdownRequested => CancellationToken.IsCancellationRequested;

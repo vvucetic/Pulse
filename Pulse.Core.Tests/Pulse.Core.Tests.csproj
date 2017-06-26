@@ -52,12 +52,17 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\Pulse.Core.csproj">
       <Project>{ebf23179-1649-4b89-bdaa-430ad0d2825a}</Project>
       <Name>Pulse.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Pulse.SqlStorage\Pulse.SqlStorage.csproj">
+      <Project>{E57B8946-0D20-41F4-957A-E7457F8E1F2A}</Project>
+      <Name>Pulse.SqlStorage</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />

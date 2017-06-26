@@ -10,8 +10,20 @@ namespace Core.Common
     {
         public int JobId { get; set; }
 
+        public int QueueJobId { get; set; }
+
         public string QueueName { get; set; }
-        
+
+        public List<int> NextJobs { get; set; } = new List<int>();
+
+        public Guid? ContextId { get; set; }
+
+        public int NumberOfConditionJobs { get; set; }
+
         public Job Job { get; set; }
+
+        public DateTime? FetchedAt { get; set; }
+
+        public DateTime CreatedAt { get; set; }
     }
 }

@@ -44,8 +44,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Entities\JobConditionEntity.cs" />
+    <Compile Include="Entities\QueueEntity.cs" />
+    <Compile Include="Entities\StateEntity.cs" />
     <Compile Include="FetchedJob.cs" />
-    <Compile Include="JobEntity.cs" />
+    <Compile Include="Entities\JobEntity.cs" />
     <Compile Include="SqlStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -61,5 +64,6 @@
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

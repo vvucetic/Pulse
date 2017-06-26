@@ -29,6 +29,21 @@ namespace Core.Common
             return FromExpression(methodCall, null);
         }
 
+        public static Job FromExpression(Expression<Func<Task>> methodCall)
+        {
+            return FromExpression(methodCall, null);
+        }
+
+        public static Job FromExpression<TType>(Expression<Action<TType>> methodCall)
+        {
+            return FromExpression(methodCall, typeof(TType));
+        }
+
+        public static Job FromExpression<TType>(Expression<Func<TType, Task>> methodCall)
+        {
+            return FromExpression(methodCall, typeof(TType));
+        }
+
         private static Job FromExpression(LambdaExpression methodCall, Type explicitType)
         {
             if (methodCall == null) throw new ArgumentNullException(nameof(methodCall));
@@ -81,6 +96,11 @@ namespace Core.Common
             return constantExpression != null
                 ? constantExpression.Value
                 : CachedExpressionCompiler.Evaluate(expression);
+        }
+
+        public override string ToString()
+        {
+            return $"{Type.ToGenericTypeString()}.{Method.Name}";
         }
     }
 }
