@@ -1,11 +1,12 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.Common
+namespace Pulse.Core.Common
 {
 
     public static class JobHelper
@@ -38,6 +39,45 @@ namespace Core.Common
             return value != null
                 ? JsonConvert.DeserializeObject(value, type, _serializerSettings)
                 : null;
+        }
+
+        private static readonly DateTime Epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        public static long ToTimestamp(DateTime value)
+        {
+            TimeSpan elapsedTime = value - Epoch;
+            return (long)elapsedTime.TotalSeconds;
+        }
+
+        public static DateTime FromTimestamp(long value)
+        {
+            return Epoch.AddSeconds(value);
+        }
+
+        public static string SerializeDateTime(DateTime value)
+        {
+            return value.ToString("o", CultureInfo.InvariantCulture);
+        }
+
+        public static DateTime DeserializeDateTime(string value)
+        {
+            long timestamp;
+            if (long.TryParse(value, out timestamp))
+            {
+                return FromTimestamp(timestamp);
+            }
+
+            return DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        }
+
+        public static DateTime? DeserializeNullableDateTime(string value)
+        {
+            if (String.IsNullOrEmpty(value))
+            {
+                return null;
+            }
+
+            return DeserializeDateTime(value);
         }
     }
 }

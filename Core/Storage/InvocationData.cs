@@ -1,5 +1,6 @@
-﻿using Core.Common;
-using Core.Exceptions;
+﻿using Pulse.Core.Common;
+using Pulse.Core.Exceptions;
+using Pulse.Core.Server;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,7 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Core.Storage
+namespace Pulse.Core.Storage
 {
     public class InvocationData
     {
@@ -62,8 +63,19 @@ namespace Core.Storage
             {
                 var parameter = parameters[i];
                 var argument = arguments[i];
-                
-                object value = DeserializeArgument(argument, parameter.ParameterType);
+
+                object value;
+
+                if (CoreBackgroundJobPerformer.Substitutions.ContainsKey(parameter.ParameterType))
+                {
+                    value = parameter.ParameterType.GetTypeInfo().IsValueType
+                        ? Activator.CreateInstance(parameter.ParameterType)
+                        : null;
+                }
+                else
+                {
+                    value = DeserializeArgument(argument, parameter.ParameterType);
+                }
 
                 result.Add(value);
             }

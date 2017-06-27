@@ -1,7 +1,7 @@
-﻿using Core.Common;
-using Core.Exceptions;
-using Core.Storage;
-using NPoco;
+﻿using NPoco;
+using Pulse.Core.Common;
+using Pulse.Core.Exceptions;
+using Pulse.Core.Storage;
 using Pulse.SqlStorage.Entities;
 using System;
 using System.Collections.Generic;
@@ -24,7 +24,7 @@ namespace Pulse.SqlStorage
             if (connectionStringName == null) throw new ArgumentNullException(nameof(connectionStringName));
             this._connectionStringName = connectionStringName;
         }
-        public override QueueJob FetchNextJob(string queue = "default")
+        public override QueueJob FetchNextJob(string[] queues)
         {
             var fetchJobSqlTemplate = $@"
 set transaction isolation level read committed
@@ -32,11 +32,11 @@ update top (1) q
 set FetchedAt = GETUTCDATE()
 output INSERTED.Id as QueueJobId, INSERTED.JobId, INSERTED.Queue, INSERTED.FetchedAt
 from JobQueue q with (readpast, updlock, rowlock, forceseek)
-where Queue = @0 and
-(FetchedAt is null or FetchedAt < DATEADD(second, @1, GETUTCDATE()))";
+where Queue IN (@queues) and
+(FetchedAt is null or FetchedAt < DATEADD(second, @timeout, GETUTCDATE()))";
             using (var db = GetDatabase())
             {
-                var fetchedJob = db.FirstOrDefault<FetchedJob>(fetchJobSqlTemplate, queue, TimeSpan.FromHours(2).Seconds);
+                var fetchedJob = db.FirstOrDefault<FetchedJob>(fetchJobSqlTemplate, new { queues = queues, timeout = TimeSpan.FromHours(2).Seconds });
                 if (fetchedJob == null)
                     return null;
 

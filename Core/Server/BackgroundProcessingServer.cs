@@ -1,4 +1,4 @@
-﻿using Core.Storage;
+﻿using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,9 +7,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Core.Server
+namespace Pulse.Core.Server
 {
-    public class BackgroundProcessingServer : IBackgroundProcess
+    public class BackgroundProcessingServer : IBackgroundProcess, IDisposable
     {
         private readonly BackgroundProcessingServerOptions _options;
         private readonly List<IBackgroundProcess> _processes = new List<IBackgroundProcess>();
@@ -97,6 +97,19 @@ namespace Core.Server
         public override string ToString()
         {
             return GetType().Name;
+        }
+
+        public void Dispose()
+        {
+            SendStop();
+
+            // TODO: Dispose _cts
+
+            if (!_bootstrapTask.Wait(_options.ShutdownTimeout))
+            {
+                //TODO Log
+                //Logger.Warn("Processing server takes too long to shutdown. Performing ungraceful shutdown.");
+            }
         }
     }
 }

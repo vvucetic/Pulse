@@ -1,6 +1,6 @@
-﻿using Core.Common;
+﻿using Pulse.Core.Common;
 
-namespace Core
+namespace Pulse.Core
 {
     public interface IBackgroundJobClient
     {

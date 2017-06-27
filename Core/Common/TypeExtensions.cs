@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Core.Common
+namespace Pulse.Core.Common
 {
     internal static class TypeExtensions
     {

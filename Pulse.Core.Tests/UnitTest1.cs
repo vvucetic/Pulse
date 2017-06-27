@@ -1,8 +1,7 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Core.Common;
-using Core;
 using Pulse.SqlStorage;
+using Pulse.Core.Common;
 
 namespace Pulse.Core.Tests
 {

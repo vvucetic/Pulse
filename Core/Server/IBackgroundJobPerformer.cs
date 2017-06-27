@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Pulse.Core.Server
 {
-    internal interface IBackgroundProcessWrapper : IBackgroundProcess
+    public interface IBackgroundJobPerformer
     {
-        IBackgroundProcess InnerProcess { get; }
+        object Perform(PerformContext context);
     }
-}   
+}

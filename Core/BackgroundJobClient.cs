@@ -1,5 +1,5 @@
-﻿using Core.Common;
-using Core.Storage;
+﻿using Pulse.Core.Common;
+using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core
+namespace Pulse.Core
 {
     public class BackgroundJobClient : IBackgroundJobClient
     {

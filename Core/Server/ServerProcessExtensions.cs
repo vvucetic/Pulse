@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Core.Server
+namespace Pulse.Core.Server
 {
     internal static class ServerProcessExtensions
     {

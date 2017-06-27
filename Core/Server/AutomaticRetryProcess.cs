@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.Server
+namespace Pulse.Core.Server
 {
     internal class AutomaticRetryProcess : IBackgroundProcessWrapper
     {

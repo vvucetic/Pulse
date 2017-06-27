@@ -1,4 +1,4 @@
-﻿using Core.Storage;
+﻿using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Core.Server
+namespace Pulse.Core.Server
 {
     public class BackgroundProcessContext
     {
@@ -14,8 +14,11 @@ namespace Core.Server
 
         public DataStorage Storage { get; }
 
-        public BackgroundProcessContext(CancellationToken cancellationToken, DataStorage storage)
+        public string ServerId { get; }
+
+        public BackgroundProcessContext(string serverId, CancellationToken cancellationToken, DataStorage storage)
         {
+            this.ServerId = serverId;
             this.CancellationToken = cancellationToken;
             this.Storage = storage;
         }

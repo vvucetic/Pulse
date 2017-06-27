@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.Server
+namespace Pulse.Core.Server
 {
     public sealed class BackgroundProcessingServerOptions
     {
@@ -15,7 +15,7 @@ namespace Core.Server
             //ServerCheckInterval = ServerWatchdog.DefaultCheckInterval;
             //ServerTimeout = ServerWatchdog.DefaultServerTimeout;
         }
-        //public TimeSpan ShutdownTimeout { get; set; }
+        public TimeSpan ShutdownTimeout { get; set; }
         public TimeSpan HeartbeatInterval { get; set; }
         //public TimeSpan ServerCheckInterval { get; set; }
         //public TimeSpan ServerTimeout { get; set; }
