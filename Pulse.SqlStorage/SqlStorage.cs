@@ -1,6 +1,7 @@
 ﻿using NPoco;
 using Pulse.Core.Common;
 using Pulse.Core.Exceptions;
+using Pulse.Core.States;
 using Pulse.Core.Storage;
 using Pulse.SqlStorage.Entities;
 using System;
@@ -27,37 +28,44 @@ namespace Pulse.SqlStorage
         public override QueueJob FetchNextJob(string[] queues)
         {
             var fetchJobSqlTemplate = $@"
-set transaction isolation level read committed
 update top (1) q
 set FetchedAt = GETUTCDATE()
 output INSERTED.Id as QueueJobId, INSERTED.JobId, INSERTED.Queue, INSERTED.FetchedAt
-from JobQueue q with (readpast, updlock, rowlock, forceseek)
+from JobQueue q
 where Queue IN (@queues) and
 (FetchedAt is null or FetchedAt < DATEADD(second, @timeout, GETUTCDATE()))";
             using (var db = GetDatabase())
             {
-                var fetchedJob = db.FirstOrDefault<FetchedJob>(fetchJobSqlTemplate, new { queues = queues, timeout = TimeSpan.FromHours(2).Seconds });
-                if (fetchedJob == null)
-                    return null;
-
-                var jobEntity = db.FirstOrDefault<JobEntity>("SELECT [Id],[State],[InvocationData],[Arguments],[CreatedAt],[NextJobs],[ContextId],[NumberOfConditionJobs] FROM Job WHERE Id = @0", fetchedJob.JobId);
-                if (jobEntity == null)
-                    throw new InternalErrorException("Job not found after fetched from queue.");
-
-                var invocationData = JobHelper.FromJson<InvocationData>(jobEntity.InvocationData);
-                var nextJobs = JobHelper.FromJson<List<int>>(jobEntity.NextJobs);
-                return new QueueJob()
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    JobId = jobEntity.Id,
-                    QueueJobId = fetchedJob.QueueJobId,
-                    QueueName = fetchedJob.Queue,
-                    Job = invocationData.Deserialize(),
-                    ContextId = jobEntity.ContextId,
-                    NextJobs = nextJobs,
-                    NumberOfConditionJobs = jobEntity.NumberOfConditionJobs,
-                    FetchedAt = fetchedJob.FetchedAt,
-                    CreatedAt = jobEntity.CreatedAt
-                };
+                    var fetchedJob = db.Query<FetchedJob>(fetchJobSqlTemplate, new { queues = queues, timeout = TimeSpan.FromHours(2).Seconds }).FirstOrDefault();
+                    if (fetchedJob == null)
+                        return null;
+
+                    var jobEntity = db.FirstOrDefault<JobEntity>("WHERE Id = @0", fetchedJob.JobId);
+                    if (jobEntity == null)
+                        throw new InternalErrorException("Job not found after fetched from queue.");
+
+                    var invocationData = JobHelper.FromJson<InvocationData>(jobEntity.InvocationData);
+                    var nextJobs = JobHelper.FromJson<List<int>>(jobEntity.NextJobs);
+                    tran.Complete();
+                    return new QueueJob()
+                    {
+                        JobId = jobEntity.Id,
+                        QueueJobId = fetchedJob.QueueJobId,
+                        QueueName = fetchedJob.Queue,
+                        Job = invocationData.Deserialize(),
+                        ContextId = jobEntity.ContextId,
+                        NextJobs = nextJobs,
+                        NumberOfConditionJobs = jobEntity.NumberOfConditionJobs,
+                        FetchedAt = fetchedJob.FetchedAt,
+                        CreatedAt = jobEntity.CreatedAt,
+                        ExpireAt = jobEntity.ExpireAt,
+                        MaxRetries = jobEntity.MaxRetries,
+                        NextRetry = jobEntity.NextRetry,
+                        RetryCount = jobEntity.RetryCount
+                    };
+                }
             }
         }
 
@@ -73,25 +81,131 @@ where Queue IN (@queues) and
                         CreatedAt = DateTime.UtcNow,
                         InvocationData = JobHelper.ToJson(InvocationData.Serialize(queueJob.Job)),
                         NextJobs = JobHelper.ToJson(queueJob.NextJobs),
-                        NumberOfConditionJobs = queueJob.NumberOfConditionJobs
+                        NumberOfConditionJobs = queueJob.NumberOfConditionJobs,
+                        RetryCount = 1,
+                        MaxRetries = queueJob.MaxRetries,
+                        NextRetry = queueJob.NextRetry
                     };
                     db.Insert<JobEntity>(insertedJob);
-                    db.Insert<StateEntity>(new StateEntity() {
-                        CreatedAt = DateTime.UtcNow,
-                        JobId = insertedJob.Id,
-                        Name = "Enqueued",
-                        Reason = null,
-                        Data = null
-                    });
-                    var insertedQueueItem = new QueueEntity()
-                    {
-                        JobId = insertedJob.Id,
-                        Queue = queueJob.QueueName
-                    };
-                    db.Insert<QueueEntity>(insertedQueueItem);
+                    InsertAndSetJobState(insertedJob.Id, new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = queueJob.QueueName, Reason="Job enqueued" }, db);
+                    AddToQueue(insertedJob.Id, queueJob.QueueName, db);
                     tran.Complete();
                     return insertedJob.Id;
                 }
+            }
+        }
+
+        public override void PersistJob(int jobId)
+        {
+            using (var db = GetDatabase())
+            {
+                db.Update<JobEntity>(new JobEntity() { ExpireAt = null }, t => t.ExpireAt);
+            }
+        }
+
+        public override void InsertAndSetJobState(int jobId, IState state)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    InsertAndSetJobState(jobId, state, db);
+                    tran.Complete();
+                }
+            }
+        }
+
+        public void InsertAndSetJobState(int jobId, IState state, Database db)
+        {
+            var newState = StateEntity.FromIState(state, jobId);
+            db.Insert<StateEntity>(newState);
+            db.Update<JobEntity>(new JobEntity() { Id = jobId, State = newState.Name, StateId = newState.Id }, t => new { t.State, t.StateId });                      
+        }
+
+        public override void InsertAndSetJobStates(int jobId, params IState[] states)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {                    
+                    for (int i = 0; i < states.Length; i++)
+                    {
+                        if(i == states.Length - 1)
+                        {
+                            //insert and set last state
+                            InsertAndSetJobState(jobId, states[i], db);
+                        }
+                        {
+                            //insert state
+                            InsertJobState(jobId, states[i], db);
+                        }
+                    }
+                    tran.Complete();
+                }
+            }
+        }
+
+        public override void UpgradeStateToScheduled(int jobId, IState oldState, IState newState, DateTime nextRun, int retryCount)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    InsertJobState(jobId, oldState, db);
+                    var stateId = InsertJobState(jobId, newState, db);
+                    db.Update<JobEntity>(new JobEntity { Id = jobId, NextRetry = nextRun, RetryCount = retryCount, StateId = stateId, State = newState.Name }, t => new { t.RetryCount, t.NextRetry, t.State, t.StateId });
+                    tran.Complete();
+                }
+            }
+        }
+
+        public override int InsertJobState(int jobId, IState state)
+        {
+            using (var db = GetDatabase())
+            {
+                var newState = StateEntity.FromIState(state, jobId);
+                db.Insert<StateEntity>(newState);
+                return newState.Id;
+            }
+        }
+
+        public int InsertJobState(int jobId, IState state, Database db)
+        {
+            var newState = StateEntity.FromIState(state, jobId);
+            db.Insert<StateEntity>(newState);
+            return newState.Id;          
+        }
+
+        public override void AddToQueue(int jobId, string queue)
+        {
+            using (var db = GetDatabase())
+            {
+                AddToQueue(jobId, queue, db);
+            }
+        }
+        public void AddToQueue(int jobId, string queue, Database db)
+        {
+            var insertedQueueItem = new QueueEntity()
+            {
+                JobId = jobId,
+                Queue = queue
+            };
+            db.Insert<QueueEntity>(insertedQueueItem);
+        }
+
+        public override void RemoveFromQueue(int queueJobId)
+        {
+            using (var db = GetDatabase())
+            {
+                db.Delete<QueueEntity>(queueJobId);
+            }
+        }
+
+        public override void Requeue(int queueJobId)
+        {
+            using (var db = GetDatabase())
+            {
+                db.Update<QueueEntity>(new QueueEntity() { Id = queueJobId, FetchedAt = null }, t=>t.FetchedAt );
             }
         }
 
@@ -106,6 +220,50 @@ where Queue IN (@queues) and
         private Database GetDatabase(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
             return new Database(this._connectionStringName);
+        }
+
+        public override void WrapTransaction(Action<Database> action)
+        {
+            using (var db = GetDatabase())
+            {
+                using (db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    action.Invoke(db);
+                }
+            }
+        }
+
+        public override bool EnqueueNextDelayedJob()
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction())
+                {
+                    var sql = @"
+DECLARE @Ids table(Id int, [Queue] [nvarchar](50))
+
+update top (1) j
+set j.NextRetry = NULL
+output INSERTED.Id as Id, inserted.[Queue] INTO @Ids
+from Job j
+WHERE j.NextRetry IS NOT NULL AND j.NextRetry < GETUTCDATE()
+
+INSERT [Queue] (JobId, [Queue])
+OUTPUT INSERTED.JobId, INSERTED.[Queue], INSERTED.[FetchedAt]
+SELECT [Id], [Queue] FROM @Ids;";
+                    var job = db.Query<FetchedJob>(sql).FirstOrDefault();
+                    if (job != null)
+                    {
+                        InsertAndSetJobState(job.JobId, new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = job.Queue, Reason = "Enqueued by DelayedJobScheduler" }, db);
+                        tran.Complete();
+                        return true;
+                    }
+                    else
+                    {
+                        return false; 
+                    }
+                }
+            }
         }
 
         private string GetConnectionString(string nameOrConnectionString)

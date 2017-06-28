@@ -1,4 +1,6 @@
 ﻿using NPoco;
+using Pulse.Core.Common;
+using Pulse.Core.States;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,5 +24,17 @@ namespace Pulse.SqlStorage.Entities
         public DateTime CreatedAt { get; set; }
 
         public string Data { get; set; }
+
+        public static StateEntity FromIState(IState state, int jobId)
+        {
+            return new StateEntity()
+            {
+                CreatedAt = DateTime.UtcNow,
+                Data = JobHelper.ToJson(state.SerializeData()),
+                JobId = jobId,
+                Name = state.Name,
+                Reason = state.Reason
+            };
+        }
     }
 }

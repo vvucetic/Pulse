@@ -25,5 +25,13 @@ namespace Pulse.Core.Common
         public DateTime? FetchedAt { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        public DateTime? ExpireAt { get; set; }
+
+        public int MaxRetries { get; set; }
+
+        public int RetryCount { get; set; }
+
+        public DateTime? NextRetry { get; set; }
     }
 }

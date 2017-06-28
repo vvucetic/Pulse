@@ -68,7 +68,7 @@ namespace Pulse.Core.Server
                 processes.Add(new Worker(this._options.Queues, performer, this._storage));
             }
 
-            //processes.Add(new DelayedJobScheduler(_options.SchedulePollingInterval, stateChanger));
+            processes.Add(new DelayedJobScheduler(_options.SchedulePollingInterval, _storage));
             //processes.Add(new RecurringJobScheduler(factory));
 
             return processes;

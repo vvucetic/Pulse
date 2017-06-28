@@ -1,7 +1,10 @@
 ﻿using Pulse.Core.Common;
+using Pulse.Core.Exceptions;
+using Pulse.Core.States;
 using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -30,42 +33,78 @@ namespace Pulse.Core.Server
         {
             context.CancellationToken.ThrowIfCancellationRequested();
             var queueJob = _storage.FetchNextJob(_queues);
-
-            try
+            _storage.InsertAndSetJobState(queueJob.JobId, new ProcessingState(context.ServerId, this._workerId));
+            var perfomContext = new PerformContext(context.CancellationToken, queueJob);
+            var resultState = PerformJob(perfomContext);
+            if(resultState is FailedState)
             {
-                var perfomContext = new PerformContext(context.CancellationToken, queueJob);
-                var result = this._performer.Perform(perfomContext);
-            }
-            catch (Exception ex)
-            {
-                if (context.IsShutdownRequested)
+                var failedState = resultState as FailedState;
+                if (queueJob.RetryCount < queueJob.MaxRetries)
                 {
-                    //Logger.Info(String.Format(
-                    //    "Shutdown request requested while processing background job '{0}'. It will be re-queued.",
-                    //    queueJob.JobId));
+                    var nextRun = DateTime.UtcNow.AddSeconds(SecondsToDelay(queueJob.RetryCount));
+                    
+                    const int maxMessageLength = 50;
+                    var exceptionMessage = failedState.Exception.Message.Length > maxMessageLength
+                        ? failedState.Exception.Message.Substring(0, maxMessageLength - 1) + "…"
+                        : failedState.Exception.Message;
+                    var scheduledState = new ScheduledState(nextRun)
+                    {
+                        Reason = $"Retry attempt { queueJob.RetryCount } of { queueJob.MaxRetries }: { exceptionMessage}"
+                    };
+                    _storage.UpgradeStateToScheduled(queueJob.JobId, resultState, scheduledState, nextRun, queueJob.RetryCount + 1);
                 }
                 else
                 {
-                    //Logger.DebugException("An exception occurred while processing a job. It will be re-queued.", ex);
+                    _storage.InsertAndSetJobState(queueJob.JobId, resultState);
                 }
-
-                //TODO Requeue needs implementation
-                Requeue(queueJob);
-                throw;
             }
-
+            else
+            {
+                //Succeeded
+                _storage.InsertAndSetJobState(queueJob.JobId, resultState);
+            }
+            _storage.RemoveFromQueue(queueJob.JobId);
         }
-        private static void Requeue(QueueJob fetchedJob)
+        private static int SecondsToDelay(long retryCount)
+        {
+            var random = new Random();
+            return (int)Math.Round(
+                Math.Pow(retryCount - 1, 4) + 15 + random.Next(30) * retryCount);
+        }
+
+        private IState PerformJob(PerformContext performContext)
         {
             try
             {
-                //fetchedJob.Requeue();
+                var latency = (DateTime.UtcNow - performContext.QueueJob.CreatedAt).TotalMilliseconds;
+                var duration = Stopwatch.StartNew();
+
+                var result = this._performer.Perform(performContext);
+
+                return new SucceededState(result, (long)latency, duration.ElapsedMilliseconds);
+
+            }
+            catch (JobPerformanceException ex)
+            {
+                return new FailedState(ex.InnerException)
+                {
+                    Reason = ex.Message
+                };
             }
             catch (Exception ex)
             {
-                //Logger.WarnException($"Failed to immediately re-queue the background job '{fetchedJob.JobId}'. Next invocation may be delayed, if invisibility timeout is used", ex);
-            }
+                if (ex is OperationCanceledException && performContext.CancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+
+                return new FailedState(ex)
+                {
+                    Reason = "An exception occurred during processing of a background job."
+                };
+            }        
         }
+        
         public override string ToString()
         {
             return $"{GetType().Name} #{_workerId.Substring(0, 8)}";

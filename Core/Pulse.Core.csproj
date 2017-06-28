@@ -33,6 +33,9 @@
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="NPoco, Version=3.5.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NPoco.3.5.1\lib\net45\NPoco.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -79,6 +82,7 @@
     <Compile Include="Server\BackgroundProcessingServer.cs" />
     <Compile Include="Server\BackgroundProcessingServerOptions.cs" />
     <Compile Include="Server\CoreBackgroundJobPerformer.cs" />
+    <Compile Include="Server\DelayedJobScheduler.cs" />
     <Compile Include="Server\IBackgroundJobPerformer.cs" />
     <Compile Include="Server\IBackgroundProcess.cs" />
     <Compile Include="Server\IBackgroundProcessWrapper.cs" />

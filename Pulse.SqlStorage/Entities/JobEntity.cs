@@ -11,6 +11,11 @@ namespace Pulse.SqlStorage.Entities
     [PrimaryKey("Id", AutoIncrement = true)]
     public class JobEntity
     {
+        public JobEntity()
+        {
+            this.MaxRetries = 10;
+            this.RetryCount = 1;
+        }
         public int Id { get; set; }
         
         public string State { get; set; }
@@ -23,11 +28,18 @@ namespace Pulse.SqlStorage.Entities
 
         public DateTime CreatedAt { get; set; }
 
+        public DateTime? ExpireAt { get; set; }
+
         public string NextJobs { get; set; }
 
         public Guid? ContextId { get; set; }
 
         public int NumberOfConditionJobs { get; set; }
-    
+
+        public int MaxRetries { get; set; }
+
+        public int RetryCount { get; set; }
+
+        public DateTime? NextRetry { get; set; }
     }
 }
