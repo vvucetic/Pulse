@@ -4,6 +4,6 @@ namespace Pulse.Core
 {
     public interface IBackgroundJobClient
     {
-        int CreateAndEnqueue(Job job, string queue);
+        int CreateAndEnqueue(Job job, string queue, int maxRetries = 10);
     }
 }

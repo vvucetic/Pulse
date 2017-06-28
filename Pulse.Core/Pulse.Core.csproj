@@ -73,7 +73,14 @@
     <Compile Include="Common\TypeExtensions.cs" />
     <Compile Include="Exceptions\InternalErrorException.cs" />
     <Compile Include="Exceptions\JobPerformanceException.cs" />
+    <Compile Include="GlobalConfiguration.cs" />
+    <Compile Include="GlobalConfigurationExtensions.cs" />
     <Compile Include="IBackgroundJobClient.cs" />
+    <Compile Include="IGlobalConfiguration.cs" />
+    <Compile Include="Log\ConsoleLogger.cs" />
+    <Compile Include="Log\ILog.cs" />
+    <Compile Include="Log\ILogProvider.cs" />
+    <Compile Include="Log\LogProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Server\AutomaticRetryProcess.cs" />
     <Compile Include="Server\BackgroundJobServer.cs" />

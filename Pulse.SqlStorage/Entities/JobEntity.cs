@@ -41,5 +41,7 @@ namespace Pulse.SqlStorage.Entities
         public int RetryCount { get; set; }
 
         public DateTime? NextRetry { get; set; }
+
+        public string Queue { get; set; }
     }
 }

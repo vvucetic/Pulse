@@ -1,5 +1,6 @@
 ﻿using NPoco;
 using Pulse.Core.Common;
+using Pulse.Core.Log;
 using Pulse.Core.States;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,31 @@ namespace Pulse.Core.Storage
 {
     public abstract class DataStorage
     {
+        private static readonly object LockObject = new object();
+        private static DataStorage _current;
+
+        public static DataStorage Current
+        {
+            get
+            {
+                lock (LockObject)
+                {
+                    if (_current == null)
+                    {
+                        throw new InvalidOperationException("DataStorage.Current property value has not been initialized. You must set it before using Pulse Client or Server API.");
+                    }
+
+                    return _current;
+                }
+            }
+            set
+            {
+                lock (LockObject)
+                {
+                    _current = value;
+                }
+            }
+        }
         public virtual void Dispose()
         {
         }
@@ -33,5 +59,10 @@ namespace Pulse.Core.Storage
         public abstract void Requeue(int queueJobId);
         public abstract void WrapTransaction(Action<Database> action);
         public abstract bool EnqueueNextDelayedJob();
+
+        public virtual void WriteOptionsToLog(ILog logger)
+        {
+
+        }
     }
 }

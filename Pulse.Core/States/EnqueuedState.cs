@@ -9,6 +9,7 @@ namespace Pulse.Core.States
 {
     public class EnqueuedState : IState
     {
+        public static string DefaultQueue = "default";
         public string Name => "Enqueued";
 
         public string Reason { get; set; }
@@ -17,7 +18,7 @@ namespace Pulse.Core.States
 
         public DateTime EnqueuedAt { get; set; }
 
-        public string Queue { get; set; } = "default";
+        public string Queue { get; set; } = DefaultQueue;
 
         public Dictionary<string, string> SerializeData()
         {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pulse.Core.States;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,7 +18,7 @@ namespace Pulse.Core.Server
         public BackgroundJobServerOptions()
         {
             WorkerCount = Math.Min(Environment.ProcessorCount * 5, MaxDefaultWorkerCount);
-            //Queues = new[] { EnqueuedState.DefaultQueue };
+            Queues = new[] { EnqueuedState.DefaultQueue };
             //ShutdownTimeout = BackgroundProcessingServer.DefaultShutdownTimeout;
             //SchedulePollingInterval = DelayedJobScheduler.DefaultPollingDelay;
             HeartbeatInterval = ServerHeartbeat.DefaultHeartbeatInterval;

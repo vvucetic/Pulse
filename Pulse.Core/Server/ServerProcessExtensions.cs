@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pulse.Core.Log;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -51,9 +52,9 @@ namespace Pulse.Core.Server
 
             // LogProvider.GetLogger does not throw any exception, that is why we are not
             // using the `try` statement here. It does not return `null` value as well.
-            //TODO Logger
-            //var logger = LogProvider.GetLogger(process.GetProcessType());
-            //logger.Debug($"Background process '{process}' started.");
+            var logger = LogProvider.GetLogger();
+            
+            logger.Log(LogLevel.Debug,$"Background process '{process}' started.");
 
             try
             {
@@ -63,22 +64,17 @@ namespace Pulse.Core.Server
             {
                 if (ex is OperationCanceledException && context.IsShutdownRequested)
                 {
-                    //TODO Logger
-
                     // Graceful shutdown
-                    //logger.Trace($"Background process '{process}' was stopped due to a shutdown request.");
+                    logger.Log(LogLevel.Debug, $"Background process '{process}' was stopped due to a shutdown request.");
+                    
                 }
                 else
                 {
-                    //TODO Logger
-
-                    //logger.FatalException(
-                    //    $"Fatal error occurred during execution of '{process}' process. It will be stopped. See the exception for details.",
-                    //    ex);
+                    logger.Log(LogLevel.Fatal, $"Fatal error occurred during execution of '{process}' process. It will be stopped. See the exception for details.", ex);
                 }
             }
 
-            //logger.Debug($"Background process '{process}' stopped.");
+            logger.Log(LogLevel.Debug, $"Background process '{process}' stopped.");
         }
 
         private static void TrySetThreadName(string name)

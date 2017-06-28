@@ -1,4 +1,5 @@
-﻿using Pulse.Core.Storage;
+﻿using Pulse.Core.Log;
+using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,8 @@ namespace Pulse.Core.Server
         public static readonly TimeSpan DefaultPollingDelay = TimeSpan.FromSeconds(15);
         private readonly TimeSpan _pollingDelay;
         private readonly DataStorage _storage;
+        private readonly ILog _logger = LogProvider.GetLogger();
+
 
         public DelayedJobScheduler(DataStorage storage) : this(DefaultPollingDelay, storage)
         {
@@ -41,8 +44,7 @@ namespace Pulse.Core.Server
 
             if (jobsEnqueued != 0)
             {
-                //TODO Logger
-                //Logger.Info($"{jobsEnqueued} scheduled job(s) enqueued.");
+                _logger.Log($"{jobsEnqueued} scheduled job(s) enqueued.");
             }
 
             context.Wait(_pollingDelay);

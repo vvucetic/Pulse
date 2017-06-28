@@ -1,4 +1,5 @@
-﻿using Pulse.Core.Storage;
+﻿using Pulse.Core.Log;
+using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,7 +14,7 @@ namespace Pulse.Core.Server
     {
         private readonly BackgroundProcessingServerOptions _options;
         private readonly List<IBackgroundProcess> _processes = new List<IBackgroundProcess>();
-
+        private readonly ILog _logger = LogProvider.GetLogger();
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         private readonly Task _bootstrapTask;
@@ -104,11 +105,10 @@ namespace Pulse.Core.Server
             SendStop();
 
             // TODO: Dispose _cts
-
+            
             if (!_bootstrapTask.Wait(_options.ShutdownTimeout))
             {
-                //TODO Log
-                //Logger.Warn("Processing server takes too long to shutdown. Performing ungraceful shutdown.");
+                _logger.Log(LogLevel.Warning, "Processing server takes too long to shutdown. Performing ungraceful shutdown.");
             }
         }
     }

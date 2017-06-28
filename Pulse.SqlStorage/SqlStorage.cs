@@ -11,29 +11,34 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Pulse.Core.Log;
 
 namespace Pulse.SqlStorage
 {
     public class SqlStorage : DataStorage
     {
         private readonly string _connectionStringName;
-
-        //Database _database;
-
-        public SqlStorage(string connectionStringName)
+        private readonly SqlServerStorageOptions _options;
+        
+        public SqlStorage(string connectionStringName) : this(connectionStringName, new SqlServerStorageOptions())
         {
-            if (connectionStringName == null) throw new ArgumentNullException(nameof(connectionStringName));
-            this._connectionStringName = connectionStringName;
         }
+
+        public SqlStorage(string connectionStringName, SqlServerStorageOptions options)
+        {
+            this._connectionStringName = connectionStringName ?? throw new ArgumentNullException(nameof(connectionStringName));
+            this._options = options ?? throw new ArgumentNullException(nameof(options));
+        }
+
         public override QueueJob FetchNextJob(string[] queues)
         {
-            var fetchJobSqlTemplate = $@"
+            var fetchJobSqlTemplate = $@";
 update top (1) q
-set FetchedAt = GETUTCDATE()
+set q.FetchedAt = GETUTCDATE()
 output INSERTED.Id as QueueJobId, INSERTED.JobId, INSERTED.Queue, INSERTED.FetchedAt
-from JobQueue q
-where Queue IN (@queues) and
-(FetchedAt is null or FetchedAt < DATEADD(second, @timeout, GETUTCDATE()))";
+from Queue q
+where q.Queue IN (@queues) and
+(q.FetchedAt is null )--or q.FetchedAt < DATEADD(second, @timeout, GETUTCDATE()))";
             using (var db = GetDatabase())
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
@@ -84,7 +89,9 @@ where Queue IN (@queues) and
                         NumberOfConditionJobs = queueJob.NumberOfConditionJobs,
                         RetryCount = 1,
                         MaxRetries = queueJob.MaxRetries,
-                        NextRetry = queueJob.NextRetry
+                        NextRetry = queueJob.NextRetry,
+                        ExpireAt = queueJob.ExpireAt,
+                        Queue = queueJob.QueueName
                     };
                     db.Insert<JobEntity>(insertedJob);
                     InsertAndSetJobState(insertedJob.Id, new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = queueJob.QueueName, Reason="Job enqueued" }, db);
@@ -239,18 +246,18 @@ where Queue IN (@queues) and
             {
                 using (var tran = db.GetTransaction())
                 {
-                    var sql = @"
-DECLARE @Ids table(Id int, [Queue] [nvarchar](50))
+                    var sql = @";
+DECLARE @@Ids table(Id int, [Queue] [nvarchar](50))
 
 update top (1) j
 set j.NextRetry = NULL
-output INSERTED.Id as Id, inserted.[Queue] INTO @Ids
+output INSERTED.Id as Id, inserted.[Queue] INTO @@Ids
 from Job j
 WHERE j.NextRetry IS NOT NULL AND j.NextRetry < GETUTCDATE()
 
 INSERT [Queue] (JobId, [Queue])
 OUTPUT INSERTED.JobId, INSERTED.[Queue], INSERTED.[FetchedAt]
-SELECT [Id], [Queue] FROM @Ids;";
+SELECT [Id], [Queue] FROM @@Ids;";
                     var job = db.Query<FetchedJob>(sql).FirstOrDefault();
                     if (job != null)
                     {
@@ -291,6 +298,12 @@ SELECT [Id], [Queue] FROM @Ids;";
             var connectionStringSetting = ConfigurationManager.ConnectionStrings[connectionStringName];
 
             return connectionStringSetting != null;
+        }
+
+        public override void WriteOptionsToLog(ILog logger)
+        {
+            logger.Log("Using the following options for SQL Server job storage:");
+            logger.Log($"    Queue poll interval: {_options.QueuePollInterval}.");
         }
     }
 }

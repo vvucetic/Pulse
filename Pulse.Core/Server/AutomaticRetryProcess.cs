@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pulse.Core.Log;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,15 +11,12 @@ namespace Pulse.Core.Server
     {
         private static readonly TimeSpan DefaultMaxAttemptDelay = TimeSpan.FromMinutes(5);
         private const int DefaultMaxRetryAttempts = int.MaxValue;
-
+        private readonly ILog _logger = LogProvider.GetLogger();
         private readonly IBackgroundProcess _innerProcess;
 
         public AutomaticRetryProcess(IBackgroundProcess innerProcess)
         {
-            if (innerProcess == null) throw new ArgumentNullException(nameof(innerProcess));
-
-            _innerProcess = innerProcess;
-            //_logger = LogProvider.GetLogger(_innerProcess.GetProcessType());
+            _innerProcess = innerProcess ?? throw new ArgumentNullException(nameof(innerProcess));
 
             MaxRetryAttempts = DefaultMaxRetryAttempts;
             MaxAttemptDelay = DefaultMaxAttemptDelay;
@@ -48,16 +46,15 @@ namespace Pulse.Core.Server
                     }
 
                     // Break the loop after the retry attempts number exceeded.
-                    if (i >= MaxRetryAttempts - 1) throw;
+                    if (i >= MaxRetryAttempts - 1)
+                    {
+                        _logger.Log(LogLevel.Error, $"Error occurred during execution of '{_innerProcess}' process. No more retries. Exiting background process.", ex);
+
+                        throw;
+                    }
 
                     var nextTry = DelayCallback(i);
-                    //var logLevel = GetLogLevel(i);
-
-                    //_logger.Log(
-                    //    logLevel,
-                    //    // ReSharper disable once AccessToModifiedClosure
-                    //    () => $"Error occurred during execution of '{_innerProcess}' process. Execution will be retried (attempt #{i + 1}) in {nextTry} seconds.",
-                    //    ex);
+                    _logger.Log(LogLevel.Warning, $"Error occurred during execution of '{_innerProcess}' process. Execution will be retried (attempt #{i + 1}) in {nextTry} seconds.", ex);
 
                     context.Wait(nextTry);
 
@@ -68,22 +65,7 @@ namespace Pulse.Core.Server
                 }
             }
         }
-
-        //private static LogLevel GetLogLevel(int i)
-        //{
-        //    switch (i)
-        //    {
-        //        case 0:
-        //            return LogLevel.Debug;
-        //        case 1:
-        //            return LogLevel.Info;
-        //        case 2:
-        //            return LogLevel.Warn;
-        //    }
-
-        //    return LogLevel.Error;
-        //}
-
+        
         public override string ToString()
         {
             return _innerProcess.ToString();

@@ -1,6 +1,8 @@
-﻿using Pulse.Core.Storage;
+﻿using Pulse.Core.Log;
+using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Pulse.Core.Server
 {
@@ -9,6 +11,13 @@ namespace Pulse.Core.Server
         private readonly BackgroundJobServerOptions _options;
         private readonly DataStorage _storage;
         private readonly BackgroundProcessingServer _processingServer;
+        private readonly ILog _logger = LogProvider.GetLogger();
+
+
+        public BackgroundJobServer():this(new BackgroundJobServerOptions(), DataStorage.Current, new List<IBackgroundProcess>())
+        {
+
+        }
 
         public BackgroundJobServer(BackgroundJobServerOptions options, DataStorage storage, IEnumerable<IBackgroundProcess> additionalProcesses)
         {
@@ -28,7 +37,16 @@ namespace Pulse.Core.Server
                 { "WorkerCount", options.WorkerCount }
             };
 
-            //TODO Log start
+            _logger.Log("Starting Pulse Server");
+            _logger.Log($"Using job storage: '{storage}'");
+
+            storage.WriteOptionsToLog(_logger);
+
+            _logger.Log("Using the following options for Pulse Server:");
+            _logger.Log($"    Worker count: {options.WorkerCount}");
+            _logger.Log($"    Listening queues: {String.Join(", ", options.Queues.Select(x => "'" + x + "'"))}");
+            _logger.Log($"    Shutdown timeout: {options.ShutdownTimeout}");
+            _logger.Log($"    Schedule polling interval: {options.SchedulePollingInterval}");
 
             _processingServer = new BackgroundProcessingServer(
                 storage,
@@ -40,17 +58,15 @@ namespace Pulse.Core.Server
 
         public void SendStop()
         {
-            //TODO LOg
-            //Logger.Debug("Hangfire Server is stopping...");
+            _logger.Log("Pulse Server is stopping...");
             _processingServer.SendStop();
         }
 
         public void Dispose()
         {
-            //TODO LOg
-
             _processingServer.Dispose();
-            //Logger.Info("Hangfire Server stopped.");
+            _logger.Log("Pulse Server stopped.");
+            
         }
 
         private IEnumerable<IBackgroundProcess> GetRequiredProcesses()

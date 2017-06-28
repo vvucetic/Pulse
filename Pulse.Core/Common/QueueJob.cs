@@ -28,7 +28,7 @@ namespace Pulse.Core.Common
 
         public DateTime? ExpireAt { get; set; }
 
-        public int MaxRetries { get; set; }
+        public int MaxRetries { get; set; } = 10;
 
         public int RetryCount { get; set; }
 

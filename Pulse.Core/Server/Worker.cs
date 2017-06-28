@@ -33,6 +33,11 @@ namespace Pulse.Core.Server
         {
             context.CancellationToken.ThrowIfCancellationRequested();
             var queueJob = _storage.FetchNextJob(_queues);
+            if(queueJob==null)
+            {
+                context.Wait(TimeSpan.FromSeconds(5));
+                return;
+            }
             _storage.InsertAndSetJobState(queueJob.JobId, new ProcessingState(context.ServerId, this._workerId));
             var perfomContext = new PerformContext(context.CancellationToken, queueJob);
             var resultState = PerformJob(perfomContext);
@@ -63,7 +68,7 @@ namespace Pulse.Core.Server
                 //Succeeded
                 _storage.InsertAndSetJobState(queueJob.JobId, resultState);
             }
-            _storage.RemoveFromQueue(queueJob.JobId);
+            _storage.RemoveFromQueue(queueJob.QueueJobId);
         }
         private static int SecondsToDelay(long retryCount)
         {

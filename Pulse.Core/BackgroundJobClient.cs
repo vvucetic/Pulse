@@ -13,12 +13,17 @@ namespace Pulse.Core
     {
         private readonly DataStorage _storage;
 
+        public BackgroundJobClient() : this(DataStorage.Current)
+        {
+
+        }
+
         public BackgroundJobClient(DataStorage storage)
         {
             this._storage = storage;
         }
 
-        public int CreateAndEnqueue(Job job, string queue = "default")
+        public int CreateAndEnqueue(Job job, string queue = "default", int maxRetries = 10)
         {
             if (string.IsNullOrEmpty(queue)) throw new ArgumentException("Queue must not be empty", nameof(queue));
             return _storage.CreateAndEnqueue(new QueueJob()
@@ -26,7 +31,8 @@ namespace Pulse.Core
                 ContextId = null,
                 Job = job,
                 NumberOfConditionJobs = 0,
-                QueueName = queue
+                QueueName = queue,
+                MaxRetries = maxRetries
             });
         }
     }

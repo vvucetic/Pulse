@@ -49,6 +49,8 @@
     <Compile Include="Entities\StateEntity.cs" />
     <Compile Include="FetchedJob.cs" />
     <Compile Include="Entities\JobEntity.cs" />
+    <Compile Include="SqlServerStorageExtensions.cs" />
+    <Compile Include="SqlServerStorageOptions.cs" />
     <Compile Include="SqlStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
