@@ -73,7 +73,7 @@ namespace Pulse.Core.Server
             }
 
             // Other exceptions are wrapped with JobPerformanceException to preserve a
-            // shallow stack trace without Hangfire methods.
+            // shallow stack trace without Pulse methods.
             throw new JobPerformanceException(
                 "An exception occurred during performance of the job.",
                 exception);
