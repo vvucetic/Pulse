@@ -4,15 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pulse.Core.Server
+namespace Pulse.Core.Server.Processes
 {
-    internal class ServerHeartbeat : IBackgroundProcess
+    internal class ServerHeartbeatProcess : IBackgroundProcess
     {
         public static readonly TimeSpan DefaultHeartbeatInterval = TimeSpan.FromSeconds(30);
 
         private readonly TimeSpan _heartbeatInterval;
 
-        public ServerHeartbeat(TimeSpan heartbeatInterval)
+        public ServerHeartbeatProcess(TimeSpan heartbeatInterval)
         {
             _heartbeatInterval = heartbeatInterval;
         }

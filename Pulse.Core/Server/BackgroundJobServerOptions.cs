@@ -1,4 +1,5 @@
-﻿using Pulse.Core.States;
+﻿using Pulse.Core.Server.Processes;
+using Pulse.Core.States;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,7 @@ namespace Pulse.Core.Server
             Queues = new[] { EnqueuedState.DefaultQueue };
             //ShutdownTimeout = BackgroundProcessingServer.DefaultShutdownTimeout;
             //SchedulePollingInterval = DelayedJobScheduler.DefaultPollingDelay;
-            HeartbeatInterval = ServerHeartbeat.DefaultHeartbeatInterval;
+            HeartbeatInterval = ServerHeartbeatProcess.DefaultHeartbeatInterval;
             //ServerTimeout = ServerWatchdog.DefaultServerTimeout;
             //ServerCheckInterval = ServerWatchdog.DefaultCheckInterval;
             

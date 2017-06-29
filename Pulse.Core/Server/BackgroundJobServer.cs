@@ -1,4 +1,5 @@
 ﻿using Pulse.Core.Log;
+using Pulse.Core.Server.Processes;
 using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
@@ -81,10 +82,10 @@ namespace Pulse.Core.Server
 
             for (var i = 0; i < _options.WorkerCount; i++)
             {
-                processes.Add(new Worker(this._options.Queues, performer, this._storage));
+                processes.Add(new WorkerProcess(this._options.Queues, performer, this._storage));
             }
 
-            processes.Add(new DelayedJobScheduler(_options.SchedulePollingInterval, _storage));
+            processes.Add(new DelayedJobSchedulerProcess(_options.SchedulePollingInterval, _storage));
             //processes.Add(new RecurringJobScheduler(factory));
 
             return processes;

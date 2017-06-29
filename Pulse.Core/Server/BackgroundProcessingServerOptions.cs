@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pulse.Core.Server.Processes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,7 +12,7 @@ namespace Pulse.Core.Server
         public BackgroundProcessingServerOptions()
         {
             //ShutdownTimeout = BackgroundProcessingServer.DefaultShutdownTimeout;
-            HeartbeatInterval = ServerHeartbeat.DefaultHeartbeatInterval;
+            HeartbeatInterval = ServerHeartbeatProcess.DefaultHeartbeatInterval;
             //ServerCheckInterval = ServerWatchdog.DefaultCheckInterval;
             //ServerTimeout = ServerWatchdog.DefaultServerTimeout;
         }

@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pulse.Core.Server
+namespace Pulse.Core.Server.Processes
 {
-    public class DelayedJobScheduler : IBackgroundProcess
+    public class DelayedJobSchedulerProcess : IBackgroundProcess
     {
         public static readonly TimeSpan DefaultPollingDelay = TimeSpan.FromSeconds(15);
         private readonly TimeSpan _pollingDelay;
@@ -16,11 +16,11 @@ namespace Pulse.Core.Server
         private readonly ILog _logger = LogProvider.GetLogger();
 
 
-        public DelayedJobScheduler(DataStorage storage) : this(DefaultPollingDelay, storage)
+        public DelayedJobSchedulerProcess(DataStorage storage) : this(DefaultPollingDelay, storage)
         {
         }
 
-        public DelayedJobScheduler(TimeSpan pollingDelay, DataStorage storage)
+        public DelayedJobSchedulerProcess(TimeSpan pollingDelay, DataStorage storage)
         {
             this._storage = storage;
             this._pollingDelay = pollingDelay;

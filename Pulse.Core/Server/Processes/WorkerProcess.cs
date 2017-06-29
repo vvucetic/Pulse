@@ -9,9 +9,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pulse.Core.Server
+namespace Pulse.Core.Server.Processes
 {
-    public class Worker : IBackgroundProcess
+    public class WorkerProcess : IBackgroundProcess
     {
         private readonly string _workerId;
 
@@ -21,7 +21,7 @@ namespace Pulse.Core.Server
 
         private readonly DataStorage _storage;
 
-        public Worker(string[] queues, IBackgroundJobPerformer performer, DataStorage storage)
+        public WorkerProcess(string[] queues, IBackgroundJobPerformer performer, DataStorage storage)
         {
             this._workerId = Guid.NewGuid().ToString();
             this._queues = queues ?? throw new ArgumentNullException(nameof(queues));

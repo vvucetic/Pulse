@@ -1,4 +1,5 @@
 ﻿using Pulse.Core.Log;
+using Pulse.Core.Server.Processes;
 using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
@@ -39,7 +40,7 @@ namespace Pulse.Core.Server
         }
         private IEnumerable<IBackgroundProcess> GetRequiredProcesses()
         {
-            yield return new ServerHeartbeat(_options.HeartbeatInterval);
+            yield return new ServerHeartbeatProcess(_options.HeartbeatInterval);
         }
         public void SendStop()  
         {
