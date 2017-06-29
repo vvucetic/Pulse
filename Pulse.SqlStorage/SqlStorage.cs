@@ -273,6 +273,37 @@ SELECT [Id], [Queue] FROM @@Ids;";
             }
         }
 
+        public override void HeartbeatServer(string server, string data)
+        {
+            var sql =
+$@"; merge Server as Target
+using (VALUES(@server, @data, @heartbeat)) as Source (Id, Data, Heartbeat)
+on Target.Id = Source.Id
+when matched then update set Data = Source.Data, LastHeartbeat = Source.Heartbeat
+when not matched then insert(Id, Data, LastHeartbeat) values(Source.Id, Source.Data, Source.Heartbeat);
+            ";
+            using (var db = GetDatabase())
+            {
+                db.Execute(sql, new { server = server, data = data, heartbeat = DateTime.UtcNow });
+            }
+        }
+       
+
+        public override void HeartbeatWorker(string worker, string server, string data)
+        {
+            var sql =
+$@"; merge Worker as Target
+using (VALUES(@worker, @server, @data, @heartbeat)) as Source (Id, Server, Data, Heartbeat)
+on Target.Id = Source.Id
+when matched then update set Data = Source.Data, LastHeartbeat = Source.Heartbeat, Server = Source.Server
+when not matched then insert(Id, Server, Data, LastHeartbeat) values(Source.Id, Source.Server, Source.Data, Source.Heartbeat);
+            ";
+            using (var db = GetDatabase())
+            {
+                db.Execute(sql, new { worker = worker, server = server, data = data, heartbeat = DateTime.UtcNow });
+            }
+        }
+
         private string GetConnectionString(string nameOrConnectionString)
         {
             if (IsConnectionString(nameOrConnectionString))

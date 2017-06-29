@@ -3,6 +3,7 @@ using Pulse.Core.Server.Processes;
 using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Pulse.Core.Server
@@ -28,8 +29,11 @@ namespace Pulse.Core.Server
 
             this._options = options;
             this._storage = storage;
+
+            var processingServerOptions = GetProcessingServerOptions();
+
             var processes = new List<IBackgroundProcess>();
-            processes.AddRange(GetRequiredProcesses());
+            processes.AddRange(GetRequiredProcesses(processingServerOptions.ServerName));
             processes.AddRange(additionalProcesses);
 
             var properties = new Dictionary<string, object>
@@ -51,7 +55,7 @@ namespace Pulse.Core.Server
 
             _processingServer = new BackgroundProcessingServer(
                 storage,
-                GetProcessingServerOptions(),
+                processingServerOptions,
                 properties,
                 processes
                 );
@@ -70,7 +74,7 @@ namespace Pulse.Core.Server
             
         }
 
-        private IEnumerable<IBackgroundProcess> GetRequiredProcesses()
+        private IEnumerable<IBackgroundProcess> GetRequiredProcesses(string serverId)
         {
             var processes = new List<IBackgroundProcess>();
 
@@ -82,7 +86,7 @@ namespace Pulse.Core.Server
 
             for (var i = 0; i < _options.WorkerCount; i++)
             {
-                processes.Add(new WorkerProcess(this._options.Queues, performer, this._storage));
+                processes.Add(new WorkerProcess(this._options.Queues, performer, this._storage, serverId));
             }
 
             processes.Add(new DelayedJobSchedulerProcess(_options.SchedulePollingInterval, _storage));
@@ -99,8 +103,26 @@ namespace Pulse.Core.Server
                 HeartbeatInterval = _options.HeartbeatInterval,
                 //ServerCheckInterval = _options.ServerWatchdogOptions?.CheckInterval ?? _options.ServerCheckInterval,
                 //ServerTimeout = _options.ServerWatchdogOptions?.ServerTimeout ?? _options.ServerTimeout,
-                ServerName = _options.ServerName
+                ServerName = GetGloballyUniqueServerId()
             };
+        }
+
+        private string GetGloballyUniqueServerId()
+        {
+            var serverName = _options.ServerName
+                ?? Environment.GetEnvironmentVariable("COMPUTERNAME")
+                ?? Environment.GetEnvironmentVariable("HOSTNAME");
+
+            var guid = Guid.NewGuid().ToString();
+
+            if (!String.IsNullOrWhiteSpace(serverName))
+            {
+                serverName += ":" + Process.GetCurrentProcess().Id;
+            }
+
+            return !String.IsNullOrWhiteSpace(serverName)
+                ? $"{serverName.ToLowerInvariant()}:{guid}"
+                : guid;
         }
     }
 }

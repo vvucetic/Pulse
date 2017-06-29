@@ -16,11 +16,19 @@ namespace Pulse.Core.Server
 
         public string ServerId { get; }
 
-        public BackgroundProcessContext(string serverId, CancellationToken cancellationToken, DataStorage storage)
+        public IReadOnlyDictionary<string, object> Properties { get; }
+
+        public ServerContext ServerContext { get; }
+
+        public BackgroundProcessContext(string serverId, CancellationToken cancellationToken, DataStorage storage, IDictionary<string, object> properties, ServerContext serverContext)
         {
-            this.ServerId = serverId;
+            if (properties == null) throw new ArgumentNullException(nameof(properties));
+            this.ServerId = serverId ?? throw new ArgumentNullException(nameof(serverId));
+            this.Storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            this.ServerContext = serverContext ?? throw new ArgumentNullException(nameof(serverContext));
+            this.Properties = new Dictionary<string, object>(properties, StringComparer.OrdinalIgnoreCase);
             this.CancellationToken = cancellationToken;
-            this.Storage = storage;
+
         }
 
         public bool IsShutdownRequested => CancellationToken.IsCancellationRequested;

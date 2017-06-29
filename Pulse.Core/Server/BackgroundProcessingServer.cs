@@ -1,4 +1,5 @@
-﻿using Pulse.Core.Log;
+﻿using Pulse.Core.Common;
+using Pulse.Core.Log;
 using Pulse.Core.Server.Processes;
 using Pulse.Core.Storage;
 using System;
@@ -31,10 +32,13 @@ namespace Pulse.Core.Server
             _processes.AddRange(processes);
             _processes.AddRange(GetRequiredProcesses());
 
+            var serverContext = GetServerContext(properties);
             var context = new BackgroundProcessContext(
-                GetGloballyUniqueServerId(),
-                _cts.Token,
-                storage
+                serverId: _options.ServerName,
+                cancellationToken: _cts.Token,
+                storage: storage,
+                properties: properties, 
+                serverContext: serverContext
                 );
             _bootstrapTask = WrapProcess(this).CreateTask(context);
         }
@@ -52,31 +56,10 @@ namespace Pulse.Core.Server
             return new InfiniteLoopProcess(new AutomaticRetryProcess(process));
         }
 
-        private string GetGloballyUniqueServerId()
-        {
-            var serverName = _options.ServerName
-                ?? Environment.GetEnvironmentVariable("COMPUTERNAME")
-                ?? Environment.GetEnvironmentVariable("HOSTNAME");
-
-            var guid = Guid.NewGuid().ToString();
-            
-            if (!String.IsNullOrWhiteSpace(serverName))
-            {
-                serverName += ":" + Process.GetCurrentProcess().Id;
-            }
-
-            return !String.IsNullOrWhiteSpace(serverName)
-                ? $"{serverName.ToLowerInvariant()}:{guid}"
-                : guid;
-        }
-
         public void Execute(BackgroundProcessContext context)
         {
-            //using (var connection = context.Storage.GetConnection())
-            //{
-            //    var serverContext = GetServerContext(context.Properties);
-            //    connection.AnnounceServer(context.ServerId, serverContext);
-            //}
+            
+            context.Storage.HeartbeatServer(context.ServerId, JobHelper.ToJson(context.ServerContext));
 
             try
             {
@@ -99,6 +82,28 @@ namespace Pulse.Core.Server
         public override string ToString()
         {
             return GetType().Name;
+        }
+
+        private static ServerContext GetServerContext(IDictionary<string, object> properties)
+        {
+            var serverContext = new ServerContext();
+
+            if (properties.ContainsKey("Queues"))
+            {
+                var array = properties["Queues"] as string[];
+                if (array != null)
+                {
+                    serverContext.Queues = array;
+                }
+            }
+
+            if (properties.ContainsKey("WorkerCount"))
+            {
+                serverContext.WorkerCount = (int)properties["WorkerCount"];
+            }
+
+            serverContext.ServerStartedAt = DateTime.UtcNow;
+            return serverContext;
         }
 
         public void Dispose()

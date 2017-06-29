@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Pulse.Core.Server.Processes
@@ -15,18 +16,24 @@ namespace Pulse.Core.Server.Processes
     {
         private readonly string _workerId;
 
+        private readonly string _serverId;
+
         private readonly string[] _queues;
 
         private readonly IBackgroundJobPerformer _performer;
 
         private readonly DataStorage _storage;
 
-        public WorkerProcess(string[] queues, IBackgroundJobPerformer performer, DataStorage storage)
+        private readonly Timer _heartbeatTimer;
+
+        public WorkerProcess(string[] queues, IBackgroundJobPerformer performer, DataStorage storage, string serverId)
         {
             this._workerId = Guid.NewGuid().ToString();
+            this._serverId = serverId ?? throw new ArgumentNullException(nameof(serverId));
             this._queues = queues ?? throw new ArgumentNullException(nameof(queues));
             this._performer = performer ?? throw new ArgumentNullException(nameof(performer));
             this._storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            this._heartbeatTimer = new Timer(Heartbeat, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
         }
 
         public void Execute(BackgroundProcessContext context)
@@ -108,6 +115,11 @@ namespace Pulse.Core.Server.Processes
                     Reason = "An exception occurred during processing of a background job."
                 };
             }        
+        }
+
+        private void Heartbeat(object obj)
+        {
+            _storage.HeartbeatWorker(_workerId, _serverId, null);
         }
         
         public override string ToString()

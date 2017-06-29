@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pulse.Core.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,7 @@ namespace Pulse.Core.Server.Processes
 {
     internal class ServerHeartbeatProcess : IBackgroundProcess
     {
-        public static readonly TimeSpan DefaultHeartbeatInterval = TimeSpan.FromSeconds(30);
+        public static readonly TimeSpan DefaultHeartbeatInterval = TimeSpan.FromSeconds(60);
 
         private readonly TimeSpan _heartbeatInterval;
 
@@ -19,8 +20,8 @@ namespace Pulse.Core.Server.Processes
 
         public void Execute(BackgroundProcessContext context)
         {
-            //context.storage.HeartBeat.
-
+            context.Storage.HeartbeatServer(context.ServerId, JobHelper.ToJson(context.ServerContext));
+            
             context.Wait(_heartbeatInterval);
         }
 
