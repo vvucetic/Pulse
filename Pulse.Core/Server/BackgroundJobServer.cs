@@ -1,4 +1,5 @@
-﻿using Pulse.Core.Log;
+﻿using Pulse.Core.Common;
+using Pulse.Core.Log;
 using Pulse.Core.Server.Processes;
 using Pulse.Core.Storage;
 using System;
@@ -30,17 +31,18 @@ namespace Pulse.Core.Server
             this._options = options;
             this._storage = storage;
 
-            var processingServerOptions = GetProcessingServerOptions();
-
-            var processes = new List<IBackgroundProcess>();
-            processes.AddRange(GetRequiredProcesses(processingServerOptions.ServerName));
-            processes.AddRange(additionalProcesses);
-
             var properties = new Dictionary<string, object>
             {
                 { "Queues", options.Queues },
                 { "WorkerCount", options.WorkerCount }
             };
+            var processingServerOptions = GetProcessingServerOptions(properties);
+
+            storage.HeartbeatServer(processingServerOptions.ServerName, JobHelper.ToJson(processingServerOptions.ServerContext));
+            
+            var processes = new List<IBackgroundProcess>();
+            processes.AddRange(GetRequiredProcesses(processingServerOptions.ServerName));
+            processes.AddRange(additionalProcesses);
 
             _logger.Log("Starting Pulse Server");
             _logger.Log($"Using job storage: '{storage}'");
@@ -95,7 +97,7 @@ namespace Pulse.Core.Server
             return processes;
         }
 
-        private BackgroundProcessingServerOptions GetProcessingServerOptions()
+        private BackgroundProcessingServerOptions GetProcessingServerOptions(Dictionary<string, object> properties)
         {
             return new BackgroundProcessingServerOptions
             {
@@ -103,8 +105,31 @@ namespace Pulse.Core.Server
                 HeartbeatInterval = _options.HeartbeatInterval,
                 //ServerCheckInterval = _options.ServerWatchdogOptions?.CheckInterval ?? _options.ServerCheckInterval,
                 //ServerTimeout = _options.ServerWatchdogOptions?.ServerTimeout ?? _options.ServerTimeout,
-                ServerName = GetGloballyUniqueServerId()
+                ServerName = GetGloballyUniqueServerId(),
+                ServerContext = GetServerContext(properties)
             };
+        }
+
+        private static ServerContext GetServerContext(IDictionary<string, object> properties)
+        {
+            var serverContext = new ServerContext();
+
+            if (properties.ContainsKey("Queues"))
+            {
+                var array = properties["Queues"] as string[];
+                if (array != null)
+                {
+                    serverContext.Queues = array;
+                }
+            }
+
+            if (properties.ContainsKey("WorkerCount"))
+            {
+                serverContext.WorkerCount = (int)properties["WorkerCount"];
+            }
+
+            serverContext.ServerStartedAt = DateTime.UtcNow;
+            return serverContext;
         }
 
         private string GetGloballyUniqueServerId()

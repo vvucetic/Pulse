@@ -23,9 +23,7 @@ namespace Pulse.Core.Server.Processes
         private readonly IBackgroundJobPerformer _performer;
 
         private readonly DataStorage _storage;
-
-        private readonly Timer _heartbeatTimer;
-
+        
         public WorkerProcess(string[] queues, IBackgroundJobPerformer performer, DataStorage storage, string serverId)
         {
             this._workerId = Guid.NewGuid().ToString();
@@ -33,7 +31,7 @@ namespace Pulse.Core.Server.Processes
             this._queues = queues ?? throw new ArgumentNullException(nameof(queues));
             this._performer = performer ?? throw new ArgumentNullException(nameof(performer));
             this._storage = storage ?? throw new ArgumentNullException(nameof(storage));
-            this._heartbeatTimer = new Timer(Heartbeat, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
+            RegisterWorker();
         }
 
         public void Execute(BackgroundProcessContext context)
@@ -107,6 +105,7 @@ namespace Pulse.Core.Server.Processes
             {
                 if (ex is OperationCanceledException && performContext.CancellationToken.IsCancellationRequested)
                 {
+                    _storage.Requeue(performContext.QueueJob.QueueJobId);
                     throw;
                 }
 
@@ -117,9 +116,9 @@ namespace Pulse.Core.Server.Processes
             }        
         }
 
-        private void Heartbeat(object obj)
+        private void RegisterWorker()
         {
-            _storage.HeartbeatWorker(_workerId, _serverId, null);
+            _storage.RegisterWorker(_workerId, _serverId);
         }
         
         public override string ToString()

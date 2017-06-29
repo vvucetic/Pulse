@@ -21,5 +21,6 @@ namespace Pulse.Core.Server
         //public TimeSpan ServerCheckInterval { get; set; }
         //public TimeSpan ServerTimeout { get; set; }
         public string ServerName { get; set; }
+        public ServerContext ServerContext { get; set; }
     }
 }

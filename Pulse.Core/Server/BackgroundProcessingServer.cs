@@ -31,14 +31,13 @@ namespace Pulse.Core.Server
             _options = options;
             _processes.AddRange(processes);
             _processes.AddRange(GetRequiredProcesses());
-
-            var serverContext = GetServerContext(properties);
+            
             var context = new BackgroundProcessContext(
                 serverId: _options.ServerName,
                 cancellationToken: _cts.Token,
                 storage: storage,
                 properties: properties, 
-                serverContext: serverContext
+                serverContext: options.ServerContext
                 );
             _bootstrapTask = WrapProcess(this).CreateTask(context);
         }
@@ -59,7 +58,7 @@ namespace Pulse.Core.Server
         public void Execute(BackgroundProcessContext context)
         {
             
-            context.Storage.HeartbeatServer(context.ServerId, JobHelper.ToJson(context.ServerContext));
+            //context.Storage.HeartbeatServer(context.ServerId, JobHelper.ToJson(context.ServerContext));
 
             try
             {
@@ -72,38 +71,13 @@ namespace Pulse.Core.Server
             }
             finally
             {
-                //using (var connection = context.Storage.GetConnection())
-                //{
-                //    connection.RemoveServer(context.ServerId);
-                //}
+                context.Storage.RemoveServer(context.ServerId);
             }
         }
 
         public override string ToString()
         {
             return GetType().Name;
-        }
-
-        private static ServerContext GetServerContext(IDictionary<string, object> properties)
-        {
-            var serverContext = new ServerContext();
-
-            if (properties.ContainsKey("Queues"))
-            {
-                var array = properties["Queues"] as string[];
-                if (array != null)
-                {
-                    serverContext.Queues = array;
-                }
-            }
-
-            if (properties.ContainsKey("WorkerCount"))
-            {
-                serverContext.WorkerCount = (int)properties["WorkerCount"];
-            }
-
-            serverContext.ServerStartedAt = DateTime.UtcNow;
-            return serverContext;
         }
 
         public void Dispose()

@@ -59,8 +59,9 @@ namespace Pulse.Core.Storage
         public abstract void Requeue(int queueJobId);
         public abstract void WrapTransaction(Action<Database> action);
         public abstract bool EnqueueNextDelayedJob();
-        public abstract void HeartbeatServer(string server, string data);
-        public abstract void HeartbeatWorker(string worker, string server, string data);
+        public abstract void HeartbeatServer(string serverId, string data);
+        public abstract void RemoveServer(string serverId);
+        public abstract void RegisterWorker(string workerId, string serverId);
 
         public virtual void WriteOptionsToLog(ILog logger)
         {

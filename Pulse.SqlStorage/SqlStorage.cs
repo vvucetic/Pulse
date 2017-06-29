@@ -287,20 +287,21 @@ when not matched then insert(Id, Data, LastHeartbeat) values(Source.Id, Source.D
                 db.Execute(sql, new { server = server, data = data, heartbeat = DateTime.UtcNow });
             }
         }
-       
-
-        public override void HeartbeatWorker(string worker, string server, string data)
+        public override void RemoveServer(string serverId)
         {
-            var sql =
-$@"; merge Worker as Target
-using (VALUES(@worker, @server, @data, @heartbeat)) as Source (Id, Server, Data, Heartbeat)
-on Target.Id = Source.Id
-when matched then update set Data = Source.Data, LastHeartbeat = Source.Heartbeat, Server = Source.Server
-when not matched then insert(Id, Server, Data, LastHeartbeat) values(Source.Id, Source.Server, Source.Data, Source.Heartbeat);
-            ";
+            var sql = $@"; DELETE FROM SERVER WHERE Id = @serverId";
             using (var db = GetDatabase())
             {
-                db.Execute(sql, new { worker = worker, server = server, data = data, heartbeat = DateTime.UtcNow });
+                db.Execute(sql, new { serverId = serverId });
+            }
+        }
+
+        public override void RegisterWorker(string workerId, string serverId)
+        {
+            var sql =$@"; INSERT INTO Worker (Id, Server) VALUES(@workerId, @serverId);";
+            using (var db = GetDatabase())
+            {
+                db.Execute(sql, new { workerId = workerId, serverId = serverId });
             }
         }
 
