@@ -103,8 +103,8 @@ namespace Pulse.Core.Server
             {
                 ShutdownTimeout = _options.ShutdownTimeout,
                 HeartbeatInterval = _options.HeartbeatInterval,
-                //ServerCheckInterval = _options.ServerWatchdogOptions?.CheckInterval ?? _options.ServerCheckInterval,
-                //ServerTimeout = _options.ServerWatchdogOptions?.ServerTimeout ?? _options.ServerTimeout,
+                ServerCheckInterval = _options.ServerCheckInterval,
+                ServerTimeout = _options.ServerTimeout,
                 ServerName = GetGloballyUniqueServerId(),
                 ServerContext = GetServerContext(properties)
             };

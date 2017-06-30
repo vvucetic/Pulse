@@ -44,6 +44,7 @@ namespace Pulse.Core.Server
         private IEnumerable<IBackgroundProcess> GetRequiredProcesses()
         {
             yield return new ServerHeartbeatProcess(_options.HeartbeatInterval);
+            yield return new ServerWatchdogProcess(_options.ServerCheckInterval, _options.ServerTimeout);
         }
         public void SendStop()  
         {
@@ -57,9 +58,6 @@ namespace Pulse.Core.Server
 
         public void Execute(BackgroundProcessContext context)
         {
-            
-            //context.Storage.HeartbeatServer(context.ServerId, JobHelper.ToJson(context.ServerContext));
-
             try
             {
                 var tasks = _processes

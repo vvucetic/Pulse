@@ -23,8 +23,8 @@ namespace Pulse.Core.Server
             //ShutdownTimeout = BackgroundProcessingServer.DefaultShutdownTimeout;
             //SchedulePollingInterval = DelayedJobScheduler.DefaultPollingDelay;
             HeartbeatInterval = ServerHeartbeatProcess.DefaultHeartbeatInterval;
-            //ServerTimeout = ServerWatchdog.DefaultServerTimeout;
-            //ServerCheckInterval = ServerWatchdog.DefaultCheckInterval;
+            ServerTimeout = ServerWatchdogProcess.DefaultServerTimeout;
+            ServerCheckInterval = ServerWatchdogProcess.DefaultCheckInterval;
             
             Activator = null;
         }

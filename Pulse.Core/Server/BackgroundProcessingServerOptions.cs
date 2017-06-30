@@ -13,13 +13,13 @@ namespace Pulse.Core.Server
         {
             //ShutdownTimeout = BackgroundProcessingServer.DefaultShutdownTimeout;
             HeartbeatInterval = ServerHeartbeatProcess.DefaultHeartbeatInterval;
-            //ServerCheckInterval = ServerWatchdog.DefaultCheckInterval;
-            //ServerTimeout = ServerWatchdog.DefaultServerTimeout;
+            ServerCheckInterval = ServerWatchdogProcess.DefaultCheckInterval;
+            ServerTimeout = ServerWatchdogProcess.DefaultServerTimeout;
         }
         public TimeSpan ShutdownTimeout { get; set; }
         public TimeSpan HeartbeatInterval { get; set; }
-        //public TimeSpan ServerCheckInterval { get; set; }
-        //public TimeSpan ServerTimeout { get; set; }
+        public TimeSpan ServerCheckInterval { get; set; }
+        public TimeSpan ServerTimeout { get; set; }
         public string ServerName { get; set; }
         public ServerContext ServerContext { get; set; }
     }

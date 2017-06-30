@@ -305,6 +305,19 @@ when not matched then insert(Id, Data, LastHeartbeat) values(Source.Id, Source.D
             }
         }
 
+        public override int RemoveTimedOutServers(TimeSpan timeout)
+        {
+            if (timeout.Duration() != timeout)
+            {
+                throw new ArgumentException("The `timeOut` value must be positive.", nameof(timeout));
+            }
+            var sql = $@"delete from Server where LastHeartbeat < @timeOutAt";
+            using (var db = GetDatabase())
+            {
+                return db.Execute(sql, new { timeOutAt = DateTime.UtcNow.Add(timeout.Negate()) });
+            }
+        }
+
         private string GetConnectionString(string nameOrConnectionString)
         {
             if (IsConnectionString(nameOrConnectionString))

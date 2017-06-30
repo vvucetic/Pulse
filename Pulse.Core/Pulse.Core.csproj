@@ -98,6 +98,7 @@
     <Compile Include="Server\JobActivatorScope.cs" />
     <Compile Include="Server\PerformContext.cs" />
     <Compile Include="Server\Processes\ServerHeartbeatProcess.cs" />
+    <Compile Include="Server\Processes\ServerWatchdogProcess.cs" />
     <Compile Include="Server\ServerContext.cs" />
     <Compile Include="Server\ServerProcessExtensions.cs" />
     <Compile Include="Server\SimpleJobActivatorScope.cs" />

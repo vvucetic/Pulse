@@ -62,7 +62,7 @@ namespace Pulse.Core.Storage
         public abstract void HeartbeatServer(string serverId, string data);
         public abstract void RemoveServer(string serverId);
         public abstract void RegisterWorker(string workerId, string serverId);
-
+        public abstract int RemoveTimedOutServers(TimeSpan timeout);
         public virtual void WriteOptionsToLog(ILog logger)
         {
 
