@@ -37,7 +37,7 @@ namespace Pulse.Core.Server.Processes
         public void Execute(BackgroundProcessContext context)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
-            var queueJob = _storage.FetchNextJob(_queues);
+            var queueJob = _storage.FetchNextJob(this._queues, this._workerId);
             if(queueJob==null)
             {
                 context.Wait(TimeSpan.FromSeconds(5));

@@ -33,5 +33,7 @@ namespace Pulse.Core.Common
         public int RetryCount { get; set; }
 
         public DateTime? NextRetry { get; set; }
+
+        public string WorkerId { get; set; }
     }
 }

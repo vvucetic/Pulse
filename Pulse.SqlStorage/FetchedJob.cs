@@ -12,5 +12,6 @@ namespace Pulse.SqlStorage
         public int JobId { get; set; }
         public string Queue { get; set; }
         public DateTime FetchedAt { get; set; }
+        public string WorkerId { get; set; }
     }
 }

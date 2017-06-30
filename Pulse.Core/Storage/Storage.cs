@@ -46,7 +46,7 @@ namespace Pulse.Core.Storage
 
         //public abstract void GetJobData(string jobId);
 
-        public abstract QueueJob FetchNextJob(string[] queue);
+        public abstract QueueJob FetchNextJob(string[] queue, string workerId);
 
         public abstract int CreateAndEnqueue(QueueJob queueJob);
         public abstract void PersistJob(int jobId);

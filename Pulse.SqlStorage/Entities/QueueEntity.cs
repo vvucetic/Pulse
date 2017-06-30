@@ -19,5 +19,6 @@ namespace Pulse.SqlStorage.Entities
 
         public DateTime? FetchedAt { get; set; }
 
+        public string WorkerId { get; set; }
     }
 }

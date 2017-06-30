@@ -30,20 +30,19 @@ namespace Pulse.SqlStorage
             this._options = options ?? throw new ArgumentNullException(nameof(options));
         }
 
-        public override QueueJob FetchNextJob(string[] queues)
+        public override QueueJob FetchNextJob(string[] queues, string workerId)
         {
             var fetchJobSqlTemplate = $@";
 update top (1) q
-set q.FetchedAt = GETUTCDATE()
+set q.FetchedAt = GETUTCDATE(), q.WorkerId = @workerId
 output INSERTED.Id as QueueJobId, INSERTED.JobId, INSERTED.Queue, INSERTED.FetchedAt
 from Queue q
-where q.Queue IN (@queues) and
-(q.FetchedAt is null )--or q.FetchedAt < DATEADD(second, @timeout, GETUTCDATE()))";
+where q.Queue IN (@queues) and q.WorkerId is null";
             using (var db = GetDatabase())
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    var fetchedJob = db.Query<FetchedJob>(fetchJobSqlTemplate, new { queues = queues, timeout = TimeSpan.FromHours(2).Seconds }).FirstOrDefault();
+                    var fetchedJob = db.Query<FetchedJob>(fetchJobSqlTemplate, new { queues = queues, workerId = workerId }).FirstOrDefault();
                     if (fetchedJob == null)
                         return null;
 
@@ -68,7 +67,8 @@ where q.Queue IN (@queues) and
                         ExpireAt = jobEntity.ExpireAt,
                         MaxRetries = jobEntity.MaxRetries,
                         NextRetry = jobEntity.NextRetry,
-                        RetryCount = jobEntity.RetryCount
+                        RetryCount = jobEntity.RetryCount,
+                        WorkerId = fetchedJob.WorkerId
                     };
                 }
             }
@@ -212,7 +212,7 @@ where q.Queue IN (@queues) and
         {
             using (var db = GetDatabase())
             {
-                db.Update<QueueEntity>(new QueueEntity() { Id = queueJobId, FetchedAt = null }, t=>t.FetchedAt );
+                db.Update<QueueEntity>(new QueueEntity() { Id = queueJobId, FetchedAt = null, WorkerId = null }, t=>new { t.WorkerId, t.FetchedAt });
             }
         }
 
@@ -309,12 +309,12 @@ when not matched then insert(Id, Data, LastHeartbeat) values(Source.Id, Source.D
         {
             if (timeout.Duration() != timeout)
             {
-                throw new ArgumentException("The `timeOut` value must be positive.", nameof(timeout));
+                throw new ArgumentException("The `timeout` value must be positive.", nameof(timeout));
             }
-            var sql = $@"delete from Server where LastHeartbeat < @timeOutAt";
+            var sql = $@"delete from Server where LastHeartbeat < @timeoutAt";
             using (var db = GetDatabase())
             {
-                return db.Execute(sql, new { timeOutAt = DateTime.UtcNow.Add(timeout.Negate()) });
+                return db.Execute(sql, new { timeoutAt = DateTime.UtcNow.Add(timeout.Negate()) });
             }
         }
 
