@@ -30,11 +30,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="CronExpressionDescriptor, Version=1.21.2.0, Culture=neutral, PublicKeyToken=a2ab0e0f73f9b037, processorArchitecture=MSIL">
+      <HintPath>..\packages\CronExpressionDescriptor.1.21.2\lib\net45\CronExpressionDescriptor.dll</HintPath>
+    </Reference>
+    <Reference Include="NCrontab, Version=3.2.20120.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ncrontab.3.3.0\lib\net35\NCrontab.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="NPoco, Version=3.5.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\NPoco.3.5.1\lib\net45\NPoco.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -70,6 +73,7 @@
     <Compile Include="Common\Job.cs" />
     <Compile Include="Common\JobHelper.cs" />
     <Compile Include="Common\QueueJob.cs" />
+    <Compile Include="Common\ScheduledJob.cs" />
     <Compile Include="Common\TypeExtensions.cs" />
     <Compile Include="Exceptions\InternalErrorException.cs" />
     <Compile Include="Exceptions\JobPerformanceException.cs" />
@@ -97,6 +101,7 @@
     <Compile Include="Server\JobActivator.cs" />
     <Compile Include="Server\JobActivatorScope.cs" />
     <Compile Include="Server\PerformContext.cs" />
+    <Compile Include="Server\Processes\RecurringTasksProcess.cs" />
     <Compile Include="Server\Processes\ServerHeartbeatProcess.cs" />
     <Compile Include="Server\Processes\ServerWatchdogProcess.cs" />
     <Compile Include="Server\ServerContext.cs" />

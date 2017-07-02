@@ -19,6 +19,7 @@ namespace Pulse.SqlStorage
     {
         private readonly string _connectionStringName;
         private readonly SqlServerStorageOptions _options;
+        private readonly QueryService _queryService;
         
         public SqlStorage(string connectionStringName) : this(connectionStringName, new SqlServerStorageOptions())
         {
@@ -28,25 +29,20 @@ namespace Pulse.SqlStorage
         {
             this._connectionStringName = connectionStringName ?? throw new ArgumentNullException(nameof(connectionStringName));
             this._options = options ?? throw new ArgumentNullException(nameof(options));
+            this._queryService = new QueryService(this._options);
         }
 
         public override QueueJob FetchNextJob(string[] queues, string workerId)
         {
-            var fetchJobSqlTemplate = $@";
-update top (1) q
-set q.FetchedAt = GETUTCDATE(), q.WorkerId = @workerId
-output INSERTED.Id as QueueJobId, INSERTED.JobId, INSERTED.Queue, INSERTED.FetchedAt
-from Queue q
-where q.Queue IN (@queues) and q.WorkerId is null";
             using (var db = GetDatabase())
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    var fetchedJob = db.Query<FetchedJob>(fetchJobSqlTemplate, new { queues = queues, workerId = workerId }).FirstOrDefault();
+                    var fetchedJob = this._queryService.FetchNextJob(queues, workerId, db);
                     if (fetchedJob == null)
                         return null;
 
-                    var jobEntity = db.FirstOrDefault<JobEntity>("WHERE Id = @0", fetchedJob.JobId);
+                    var jobEntity = this._queryService.GetJob(fetchedJob.JobId, db);
                     if (jobEntity == null)
                         throw new InternalErrorException("Job not found after fetched from queue.");
 
@@ -93,22 +89,27 @@ where q.Queue IN (@queues) and q.WorkerId is null";
                         ExpireAt = queueJob.ExpireAt,
                         Queue = queueJob.QueueName
                     };
-                    db.Insert<JobEntity>(insertedJob);
-                    InsertAndSetJobState(insertedJob.Id, new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = queueJob.QueueName, Reason="Job enqueued" }, db);
-                    AddToQueue(insertedJob.Id, queueJob.QueueName, db);
+                    var jobId = this._queryService.InsertJob(insertedJob, db);
+                    var stateId = this._queryService.InsertJobState(
+                        StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = queueJob.QueueName, Reason = "Job enqueued" }, 
+                        insertedJob.Id), 
+                        db);
+                    this._queryService.SetJobState(jobId, stateId, EnqueuedState.DefaultName, db);
+                    this._queryService.InsertJobToQueue(jobId, queueJob.QueueName, db);
+                    
                     tran.Complete();
-                    return insertedJob.Id;
+                    return jobId;
                 }
             }
         }
 
-        public override void PersistJob(int jobId)
-        {
-            using (var db = GetDatabase())
-            {
-                db.Update<JobEntity>(new JobEntity() { ExpireAt = null }, t => t.ExpireAt);
-            }
-        }
+        //public override void PersistJob(int jobId)
+        //{
+        //    using (var db = GetDatabase())
+        //    {
+        //        db.Update<JobEntity>(new JobEntity() { ExpireAt = null }, t => t.ExpireAt);
+        //    }
+        //}
 
         public override void InsertAndSetJobState(int jobId, IState state)
         {
@@ -116,19 +117,13 @@ where q.Queue IN (@queues) and q.WorkerId is null";
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    InsertAndSetJobState(jobId, state, db);
+                    var stateId = this._queryService.InsertJobState(StateEntity.FromIState(state, jobId), db);
+                    this._queryService.SetJobState(jobId, stateId, state.Name, db);
                     tran.Complete();
                 }
             }
         }
-
-        public void InsertAndSetJobState(int jobId, IState state, Database db)
-        {
-            var newState = StateEntity.FromIState(state, jobId);
-            db.Insert<StateEntity>(newState);
-            db.Update<JobEntity>(new JobEntity() { Id = jobId, State = newState.Name, StateId = newState.Id }, t => new { t.State, t.StateId });                      
-        }
-
+        
         public override void InsertAndSetJobStates(int jobId, params IState[] states)
         {
             using (var db = GetDatabase())
@@ -137,14 +132,18 @@ where q.Queue IN (@queues) and q.WorkerId is null";
                 {                    
                     for (int i = 0; i < states.Length; i++)
                     {
-                        if(i == states.Length - 1)
+                        var newState = StateEntity.FromIState(states[i], jobId);
+
+                        if (i == states.Length - 1)
                         {
                             //insert and set last state
-                            InsertAndSetJobState(jobId, states[i], db);
+                            this._queryService.InsertJobState(newState, db);
+                            this._queryService.SetJobState(jobId, newState.Id, newState.Name, db);
+
                         }
                         {
                             //insert state
-                            InsertJobState(jobId, states[i], db);
+                            this._queryService.InsertJobState(newState, db);                            
                         }
                     }
                     tran.Complete();
@@ -152,59 +151,36 @@ where q.Queue IN (@queues) and q.WorkerId is null";
             }
         }
 
-        public override void UpgradeStateToScheduled(int jobId, IState oldState, IState newState, DateTime nextRun, int retryCount)
+        public override void UpgradeStateToScheduled(int jobId, IState oldState, IState scheduledState, DateTime nextRun, int retryCount)
         {
             using (var db = GetDatabase())
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    InsertJobState(jobId, oldState, db);
-                    var stateId = InsertJobState(jobId, newState, db);
-                    db.Update<JobEntity>(new JobEntity { Id = jobId, NextRetry = nextRun, RetryCount = retryCount, StateId = stateId, State = newState.Name }, t => new { t.RetryCount, t.NextRetry, t.State, t.StateId });
+                    this._queryService.InsertJobState(StateEntity.FromIState(oldState, jobId), db);
+                    var stateId = this._queryService.InsertJobState(StateEntity.FromIState(scheduledState, jobId), db);
+                    this._queryService.UpdateJob(
+                        new JobEntity { Id = jobId, NextRetry = nextRun, RetryCount = retryCount, StateId = stateId, State = scheduledState.Name }, 
+                        t => new { t.RetryCount, t.NextRetry, t.State, t.StateId },
+                        db);
                     tran.Complete();
                 }
             }
-        }
-
-        public override int InsertJobState(int jobId, IState state)
-        {
-            using (var db = GetDatabase())
-            {
-                var newState = StateEntity.FromIState(state, jobId);
-                db.Insert<StateEntity>(newState);
-                return newState.Id;
-            }
-        }
-
-        public int InsertJobState(int jobId, IState state, Database db)
-        {
-            var newState = StateEntity.FromIState(state, jobId);
-            db.Insert<StateEntity>(newState);
-            return newState.Id;          
-        }
+        }        
 
         public override void AddToQueue(int jobId, string queue)
         {
             using (var db = GetDatabase())
             {
-                AddToQueue(jobId, queue, db);
+                this._queryService.InsertJobToQueue(jobId, queue, db);
             }
-        }
-        public void AddToQueue(int jobId, string queue, Database db)
-        {
-            var insertedQueueItem = new QueueEntity()
-            {
-                JobId = jobId,
-                Queue = queue
-            };
-            db.Insert<QueueEntity>(insertedQueueItem);
         }
 
         public override void RemoveFromQueue(int queueJobId)
         {
             using (var db = GetDatabase())
             {
-                db.Delete<QueueEntity>(queueJobId);
+                this._queryService.RemoveFromQueue(queueJobId, db);
             }
         }
 
@@ -212,31 +188,7 @@ where q.Queue IN (@queues) and q.WorkerId is null";
         {
             using (var db = GetDatabase())
             {
-                db.Update<QueueEntity>(new QueueEntity() { Id = queueJobId, FetchedAt = null, WorkerId = null }, t=>new { t.WorkerId, t.FetchedAt });
-            }
-        }
-
-        public override void Dispose()
-        {
-            //if (this._database != null)
-            //{
-            //    this._database.Dispose();
-            //}
-        }
-
-        private Database GetDatabase(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
-        {
-            return new Database(this._connectionStringName);
-        }
-
-        public override void WrapTransaction(Action<Database> action)
-        {
-            using (var db = GetDatabase())
-            {
-                using (db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    action.Invoke(db);
-                }
+                this._queryService.UpdateQueue(new QueueEntity() { Id = queueJobId, FetchedAt = null, WorkerId = null }, t=>new { t.WorkerId, t.FetchedAt }, db);
             }
         }
 
@@ -246,22 +198,11 @@ where q.Queue IN (@queues) and q.WorkerId is null";
             {
                 using (var tran = db.GetTransaction())
                 {
-                    var sql = @";
-DECLARE @@Ids table(Id int, [Queue] [nvarchar](50))
-
-update top (1) j
-set j.NextRetry = NULL
-output INSERTED.Id as Id, inserted.[Queue] INTO @@Ids
-from Job j
-WHERE j.NextRetry IS NOT NULL AND j.NextRetry < GETUTCDATE()
-
-INSERT [Queue] (JobId, [Queue])
-OUTPUT INSERTED.JobId, INSERTED.[Queue], INSERTED.[FetchedAt]
-SELECT [Id], [Queue] FROM @@Ids;";
-                    var job = db.Query<FetchedJob>(sql).FirstOrDefault();
+                    var job = this._queryService.EnqueueNextDelayedJob(db);
                     if (job != null)
                     {
-                        InsertAndSetJobState(job.JobId, new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = job.Queue, Reason = "Enqueued by DelayedJobScheduler" }, db);
+                        var stateId = this._queryService.InsertJobState(StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = job.Queue, Reason = "Enqueued by DelayedJobScheduler" }, job.JobId), db);
+                        this._queryService.SetJobState(job.JobId, stateId, EnqueuedState.DefaultName, db);
                         tran.Complete();
                         return true;
                     }
@@ -275,33 +216,24 @@ SELECT [Id], [Queue] FROM @@Ids;";
 
         public override void HeartbeatServer(string server, string data)
         {
-            var sql =
-$@"; merge Server as Target
-using (VALUES(@server, @data, @heartbeat)) as Source (Id, Data, Heartbeat)
-on Target.Id = Source.Id
-when matched then update set Data = Source.Data, LastHeartbeat = Source.Heartbeat
-when not matched then insert(Id, Data, LastHeartbeat) values(Source.Id, Source.Data, Source.Heartbeat);
-            ";
             using (var db = GetDatabase())
             {
-                db.Execute(sql, new { server = server, data = data, heartbeat = DateTime.UtcNow });
+                this._queryService.HeartbeatServer(server, data, db);
             }
         }
         public override void RemoveServer(string serverId)
         {
-            var sql = $@"; DELETE FROM SERVER WHERE Id = @serverId";
             using (var db = GetDatabase())
             {
-                db.Execute(sql, new { serverId = serverId });
+                this._queryService.RemoveServer(serverId, db);
             }
         }
 
         public override void RegisterWorker(string workerId, string serverId)
         {
-            var sql =$@"; INSERT INTO Worker (Id, Server) VALUES(@workerId, @serverId);";
             using (var db = GetDatabase())
             {
-                db.Execute(sql, new { workerId = workerId, serverId = serverId });
+                this._queryService.RegisterWorker(workerId, serverId, db);
             }
         }
 
@@ -311,10 +243,60 @@ when not matched then insert(Id, Data, LastHeartbeat) values(Source.Id, Source.D
             {
                 throw new ArgumentException("The `timeout` value must be positive.", nameof(timeout));
             }
-            var sql = $@"delete from Server where LastHeartbeat < @timeoutAt";
             using (var db = GetDatabase())
             {
-                return db.Execute(sql, new { timeoutAt = DateTime.UtcNow.Add(timeout.Negate()) });
+                return this._queryService.RemoveTimedOutServers(timeout, db);
+            }
+        }
+
+        public override bool EnqueueNextScheduledItem(Func<ScheduledJob, ScheduledJob> caluculateNext )
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    var scheduleEntity = this._queryService.LockFirstScheduledItem(db);
+                    if (scheduleEntity == null)
+                    {
+                        return false;
+                    }
+                    
+                    if(!string.IsNullOrEmpty(scheduleEntity.JobInvocationData))
+                    {
+                        var scheduledJob = ScheduleEntity.ToScheduleJob(scheduleEntity);
+
+                        scheduledJob = caluculateNext(scheduledJob);
+                        scheduleEntity.LastInvocation = scheduledJob.LastInvocation;
+                        scheduleEntity.NextInvocation = scheduledJob.NextInvocation;
+                        this._queryService.UpdateScheduledItem(scheduleEntity, t => new { t.LastInvocation, t.NextInvocation }, db);
+                        var insertedJob = JobEntity.FromScheduleEntity(scheduledJob);                        
+                        var jobId = this._queryService.InsertJob(insertedJob, db);
+                        var stateId = this._queryService.InsertJobState(
+                            StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = scheduledJob.QueueJob.QueueName, Reason = "Job enqueued by Recurring Scheduler" },
+                            insertedJob.Id),
+                            db);
+                        this._queryService.SetJobState(jobId, stateId, EnqueuedState.DefaultName, db);
+                        this._queryService.InsertJobToQueue(jobId, scheduledJob.QueueJob.QueueName, db);
+                        tran.Complete();
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+
+
+        public override int CreateOrUpdateRecurringJob(ScheduledJob job)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    return this._queryService.CreateOrUpdateRecurringJob(job, db);
+                }
             }
         }
 
@@ -345,6 +327,18 @@ when not matched then insert(Id, Data, LastHeartbeat) values(Source.Id, Source.D
             return connectionStringSetting != null;
         }
 
+        public override void Dispose()
+        {
+            //if (this._database != null)
+            //{
+            //    this._database.Dispose();
+            //}
+        }
+
+        private Database GetDatabase(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        {
+            return new Database(this._connectionStringName);
+        }
         public override void WriteOptionsToLog(ILog logger)
         {
             logger.Log("Using the following options for SQL Server job storage:");

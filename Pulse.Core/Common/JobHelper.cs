@@ -53,7 +53,7 @@ namespace Pulse.Core.Common
         {
             return Epoch.AddSeconds(value);
         }
-
+        
         public static string SerializeDateTime(DateTime value)
         {
             return value.ToString("o", CultureInfo.InvariantCulture);

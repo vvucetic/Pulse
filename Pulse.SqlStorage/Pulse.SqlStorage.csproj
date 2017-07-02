@@ -46,9 +46,12 @@
   <ItemGroup>
     <Compile Include="Entities\JobConditionEntity.cs" />
     <Compile Include="Entities\QueueEntity.cs" />
+    <Compile Include="Entities\ScheduleEntity.cs" />
     <Compile Include="Entities\StateEntity.cs" />
     <Compile Include="FetchedJob.cs" />
     <Compile Include="Entities\JobEntity.cs" />
+    <Compile Include="QueryService.cs" />
+    <Compile Include="ScheduledJobInvocationData.cs" />
     <Compile Include="SqlServerStorageExtensions.cs" />
     <Compile Include="SqlServerStorageOptions.cs" />
     <Compile Include="SqlStorage.cs" />

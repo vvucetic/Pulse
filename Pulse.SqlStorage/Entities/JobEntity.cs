@@ -1,4 +1,5 @@
 ﻿using NPoco;
+using Pulse.Core.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -43,5 +44,23 @@ namespace Pulse.SqlStorage.Entities
         public DateTime? NextRetry { get; set; }
 
         public string Queue { get; set; }
+
+        public static JobEntity FromScheduleEntity(ScheduledJob scheduledJob)
+        {
+            return new JobEntity
+            {
+                ContextId = scheduledJob.QueueJob.ContextId,
+                CreatedAt = scheduledJob.QueueJob.CreatedAt,
+                ExpireAt = scheduledJob.QueueJob.ExpireAt,
+                Id = scheduledJob.QueueJob.JobId,
+                MaxRetries = scheduledJob.QueueJob.MaxRetries,
+                InvocationData = JobHelper.ToJson(Pulse.Core.Storage.InvocationData.Serialize(scheduledJob.QueueJob.Job)),
+                NextJobs = JobHelper.ToJson(scheduledJob.QueueJob.NextJobs),
+                NumberOfConditionJobs = scheduledJob.QueueJob.NumberOfConditionJobs,
+                RetryCount = 1,
+                NextRetry = scheduledJob.QueueJob.NextRetry,
+                Queue = scheduledJob.QueueJob.QueueName
+            };
+        }
     }
 }
