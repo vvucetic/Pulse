@@ -44,5 +44,18 @@ namespace Pulse.Core.Tests
             Debug.WriteLine("Nooo!");
             throw new Exception("Custom exception");
         }
+
+        [TestMethod]
+        public void CreateRecurringJob()
+        {
+            GlobalConfiguration.Configuration.UseSqlServerStorage("db");
+
+            RecurringJob.AddOrUpdate(() => RecurringMethod(1), Cron.MinuteInterval(2));
+        }
+
+        public void RecurringMethod(int i)
+        {
+            Debug.WriteLine("Recurring wooorks!");
+        }
     }
 }

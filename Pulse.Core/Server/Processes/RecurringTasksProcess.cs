@@ -3,6 +3,7 @@ using Pulse.Core.Common;
 using Pulse.Core.Log;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,19 +16,26 @@ namespace Pulse.Core.Server.Processes
 
         public void Execute(BackgroundProcessContext context)
         {
-            var jobsEnqueued = 0;
-            while (context.Storage.EnqueueNextScheduledItem((CalculateNextInvocation)))
+            try
             {
-                jobsEnqueued++;
-
-                if (context.IsShutdownRequested)
+                var jobsEnqueued = 0;
+                while (context.Storage.EnqueueNextScheduledItem((CalculateNextInvocation)))
                 {
-                    break;
+                    jobsEnqueued++;
+
+                    if (context.IsShutdownRequested)
+                    {
+                        break;
+                    }
+                };
+                if (jobsEnqueued != 0)
+                {
+                    _logger.Log($"{jobsEnqueued} scheduled job(s)/workflow(s) enqueued by Recurring Tasks Process.");
                 }
-            };
-            if (jobsEnqueued != 0)
+            }
+            catch (SqlException sqlEx) when (sqlEx.Number == 1205)
             {
-                _logger.Log($"{jobsEnqueued} scheduled job(s)/workflow(s) enqueued by Recurring Tasks Process.");
+                //deadlock, just skip, other process on other server is taking care of it...
             }
             context.Wait(TimeSpan.FromMinutes(1));
         }

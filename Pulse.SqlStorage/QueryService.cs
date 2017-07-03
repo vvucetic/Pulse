@@ -147,10 +147,9 @@ $@"; merge Schedule as Target
 using (VALUES(@name, @cron, @lastInvocation, @nextInvocation, @jobInvocationData, @workflowInvocationData)) as Source (Name, Cron, LastInvocation, NextInvocation, JobInvocationData, WorkflowInvocationData)
 on Target.Name = Source.Name
 when matched then update set Cron = Source.Cron, LastInvocation = Source.LastInvocation, NextInvocation = Source.NextInvocation, JobInvocationData = Source.JobInvocationData, WorkflowInvocationData = Source.WorkflowInvocationData
-when not matched then insert(Name, Cron, LastInvocation, NextInvocation, JobInvocationData, WorkflowInvocationData) values(Source.Name,Source.Cron,Source.LastInvocation,Source.NextInvocation,Source.JobInvocationData,Source.WorkflowInvocationData,);
+when not matched then insert(Name, Cron, LastInvocation, NextInvocation, JobInvocationData, WorkflowInvocationData) values(Source.Name,Source.Cron,Source.LastInvocation,Source.NextInvocation,Source.JobInvocationData,Source.WorkflowInvocationData);
 ";
-            return db.Execute(sql, new { name = job.Name, cron = job.Cron, lastInvocation = job.LastInvocation, nextInvocation = job.NextInvocation, jobInvocationData = ScheduledJobInvocationData.FromScheduledJob(job), workflowInvocationData = "" });
-
+            return db.Execute(sql, new { name = job.Name, cron = job.Cron, lastInvocation = job.LastInvocation, nextInvocation = job.NextInvocation, jobInvocationData = JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(job)), workflowInvocationData = "" });
         }        
     }
 }

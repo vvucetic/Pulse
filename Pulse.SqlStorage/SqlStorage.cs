@@ -295,7 +295,9 @@ namespace Pulse.SqlStorage
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    return this._queryService.CreateOrUpdateRecurringJob(job, db);
+                    var result = this._queryService.CreateOrUpdateRecurringJob(job, db);
+                    tran.Complete();
+                    return result;
                 }
             }
         }

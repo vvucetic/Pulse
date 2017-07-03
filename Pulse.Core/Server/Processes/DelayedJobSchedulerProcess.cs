@@ -10,7 +10,7 @@ namespace Pulse.Core.Server.Processes
 {
     public class DelayedJobSchedulerProcess : IBackgroundProcess
     {
-        public static readonly TimeSpan DefaultPollingDelay = TimeSpan.FromSeconds(15);
+        public static readonly TimeSpan DefaultPollingDelay = TimeSpan.FromSeconds(30);
         private readonly TimeSpan _pollingDelay;
         private readonly DataStorage _storage;
         private readonly ILog _logger = LogProvider.GetLogger();
