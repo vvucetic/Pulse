@@ -72,10 +72,13 @@
     <Compile Include="Common\ExpressionUtil\TypeBinaryExpressionFingerprint.cs" />
     <Compile Include="Common\ExpressionUtil\UnaryExpressionFingerprint.cs" />
     <Compile Include="Common\Job.cs" />
+    <Compile Include="Common\JobConverter.cs" />
+    <Compile Include="Common\WorkflowJobGroup.cs" />
     <Compile Include="Common\JobHelper.cs" />
     <Compile Include="Common\QueueJob.cs" />
     <Compile Include="Common\ScheduledJob.cs" />
     <Compile Include="Common\TypeExtensions.cs" />
+    <Compile Include="Common\Workflow.cs" />
     <Compile Include="Exceptions\InternalErrorException.cs" />
     <Compile Include="Exceptions\JobPerformanceException.cs" />
     <Compile Include="GlobalConfiguration.cs" />
@@ -114,6 +117,7 @@
     <Compile Include="Server\ServerProcessExtensions.cs" />
     <Compile Include="Server\SimpleJobActivatorScope.cs" />
     <Compile Include="Server\Processes\WorkerProcess.cs" />
+    <Compile Include="States\AwaitingState.cs" />
     <Compile Include="States\EnqueuedState.cs" />
     <Compile Include="States\FailedState.cs" />
     <Compile Include="States\IState.cs" />
@@ -122,9 +126,11 @@
     <Compile Include="States\SucceededState.cs" />
     <Compile Include="Storage\InvocationData.cs" />
     <Compile Include="Storage\Storage.cs" />
+    <Compile Include="Common\WorkflowJob.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

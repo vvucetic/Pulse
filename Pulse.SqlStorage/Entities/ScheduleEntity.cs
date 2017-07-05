@@ -35,7 +35,7 @@ namespace Pulse.SqlStorage.Entities
                 Name = scheduleEntity.Name,
                 QueueJob = new QueueJob()
                 {
-                    Job = JobHelper.FromJson<InvocationData>(jobInvocationData.InvocationData).Deserialize(),
+                    Job = jobInvocationData.Job,
                     ContextId = jobInvocationData.ContextId,
                     MaxRetries = jobInvocationData.MaxRetries,
                     QueueName = jobInvocationData.Queue,

@@ -23,9 +23,7 @@ namespace Pulse.Core
             get { return _timeZone; }
             set
             {
-                if (value == null) throw new ArgumentNullException(nameof(value));
-
-                _timeZone = value;
+                _timeZone = value ?? throw new ArgumentNullException(nameof(value));
             }
         }
         

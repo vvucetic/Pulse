@@ -26,9 +26,7 @@ namespace Pulse.Core.Server
             if (storage == null) throw new ArgumentNullException(nameof(storage));
             if (processes == null) throw new ArgumentNullException(nameof(processes));
             if (properties == null) throw new ArgumentNullException(nameof(properties));
-            if (options == null) throw new ArgumentNullException(nameof(options));
-
-            _options = options;
+            _options = options ?? throw new ArgumentNullException(nameof(options));
             _processes.AddRange(processes);
             _processes.AddRange(GetRequiredProcesses());
             

@@ -57,7 +57,6 @@ namespace Pulse.SqlStorage
                         Job = invocationData.Deserialize(),
                         ContextId = jobEntity.ContextId,
                         NextJobs = nextJobs,
-                        NumberOfConditionJobs = jobEntity.NumberOfConditionJobs,
                         FetchedAt = fetchedJob.FetchedAt,
                         CreatedAt = jobEntity.CreatedAt,
                         ExpireAt = jobEntity.ExpireAt,
@@ -70,7 +69,7 @@ namespace Pulse.SqlStorage
             }
         }
 
-        public override int CreateAndEnqueue(QueueJob queueJob)
+        public override int CreateAndEnqueueJob(QueueJob queueJob)
         {
             using (var db = GetDatabase())
             {
@@ -82,7 +81,6 @@ namespace Pulse.SqlStorage
                         CreatedAt = DateTime.UtcNow,
                         InvocationData = JobHelper.ToJson(InvocationData.Serialize(queueJob.Job)),
                         NextJobs = JobHelper.ToJson(queueJob.NextJobs),
-                        NumberOfConditionJobs = queueJob.NumberOfConditionJobs,
                         RetryCount = 1,
                         MaxRetries = queueJob.MaxRetries,
                         NextRetry = queueJob.NextRetry,
@@ -99,6 +97,51 @@ namespace Pulse.SqlStorage
                     
                     tran.Complete();
                     return jobId;
+                }
+            }
+        }
+
+        private int CreateAndEnqueueJob(QueueJob queueJob, IState state, Database db)
+        {
+            var insertedJob = new JobEntity()
+            {
+                ContextId = queueJob.ContextId,
+                CreatedAt = DateTime.UtcNow,
+                InvocationData = JobHelper.ToJson(queueJob.Job),
+                NextJobs = JobHelper.ToJson(queueJob.NextJobs),
+                RetryCount = 1,
+                MaxRetries = queueJob.MaxRetries,
+                NextRetry = queueJob.NextRetry,
+                ExpireAt = queueJob.ExpireAt,
+                Queue = queueJob.QueueName
+            };
+            var jobId = this._queryService.InsertJob(insertedJob, db);
+            var stateId = this._queryService.InsertJobState(
+                StateEntity.FromIState(state,
+                insertedJob.Id),
+                db);
+            this._queryService.SetJobState(jobId, stateId, state.Name, db);
+            this._queryService.InsertJobToQueue(jobId, queueJob.QueueName, db);
+            
+            return jobId;
+        }
+
+        public override void CreateAndEnqueueWorkflow(Workflow workflow)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    var rootJobs = workflow.GetRootJobs().ToDictionary(t => t.TempId, null);
+                    workflow.SaveWorkflow((workflowJob) => {
+                        return CreateAndEnqueueJob(
+                            queueJob: workflowJob.QueueJob,
+                            state: rootJobs.ContainsKey(workflowJob.TempId) ? 
+                                new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = "Automatically enqueued as part of workflow because not parent jobs to wait for."  } as IState
+                                : new AwaitingState() { Reason = "Waiting for other job/s to finish." } as IState,
+                            db: db
+                            );
+                    });
                 }
             }
         }

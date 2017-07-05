@@ -10,8 +10,7 @@ namespace Pulse.Core.Server.Processes
     {
         public InfiniteLoopProcess(IBackgroundProcess innerProcess)
         {
-            if (innerProcess == null) throw new ArgumentNullException(nameof(innerProcess));
-            InnerProcess = innerProcess;
+            InnerProcess = innerProcess ?? throw new ArgumentNullException(nameof(innerProcess));
         }
 
         public IBackgroundProcess InnerProcess { get; }

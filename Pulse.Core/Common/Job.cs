@@ -1,15 +1,17 @@
 ﻿using Pulse.Common;
+using Pulse.Core.Storage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Pulse.Core.Common
 {
-    public class Job
+    public class Job //: ISerializable
     {
         public Type Type { get; }
 
@@ -23,6 +25,15 @@ namespace Pulse.Core.Common
             this.Method = method;
             this.Arguments = arguments;
         }
+
+        //public Job(SerializationInfo info, StreamingContext text)
+        //{
+        //    var invocationData = (InvocationData)info.GetValue("job", typeof(InvocationData));
+        //    var job = invocationData.Deserialize();
+        //    this.Arguments = job.Arguments;
+        //    this.Type = job.Type;
+        //    this.Method = job.Method;
+        //}
 
         public static Job FromExpression(Expression<Action> methodCall)
         {
@@ -102,5 +113,10 @@ namespace Pulse.Core.Common
         {
             return $"{Type.ToGenericTypeString()}.{Method.Name}";
         }
+
+        //public void GetObjectData(SerializationInfo info, StreamingContext context)
+        //{
+        //    info.AddValue("job", InvocationData.Serialize(this));
+        //}
     }
 }

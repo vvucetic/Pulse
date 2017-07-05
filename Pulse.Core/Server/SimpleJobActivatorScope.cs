@@ -13,16 +13,14 @@ namespace Pulse.Core.Server
 
         public SimpleJobActivatorScope(JobActivator activator)
         {
-            if (activator == null) throw new ArgumentNullException(nameof(activator));
-            _activator = activator;
+            _activator = activator ?? throw new ArgumentNullException(nameof(activator));
         }
 
         public override object Resolve(Type type)
         {
             var instance = _activator.ActivateJob(type);
-            var disposable = instance as IDisposable;
 
-            if (disposable != null)
+            if (instance is IDisposable disposable)
             {
                 _disposables.Add(disposable);
             }

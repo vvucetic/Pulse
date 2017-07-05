@@ -11,24 +11,24 @@ namespace Pulse.Core.Common
 
     public static class JobHelper
     {
-        private static JsonSerializerSettings _serializerSettings;
+        //private static JsonSerializerSettings _serializerSettings;
 
-        public static void SetSerializerSettings(JsonSerializerSettings setting)
-        {
-            _serializerSettings = setting;
-        }
+        //public static void SetSerializerSettings(JsonSerializerSettings setting)
+        //{
+        //    _serializerSettings = setting;
+        //}
 
         public static string ToJson(object value)
         {
             return value != null
-                ? JsonConvert.SerializeObject(value, _serializerSettings)
+                ? JsonConvert.SerializeObject(value, new JobConverter())
                 : null;
         }
 
         public static T FromJson<T>(string value)
         {
             return value != null
-                ? JsonConvert.DeserializeObject<T>(value, _serializerSettings)
+                ? JsonConvert.DeserializeObject<T>(value, new JobConverter())
                 : default(T);
         }
 
@@ -37,7 +37,7 @@ namespace Pulse.Core.Common
             if (type == null) throw new ArgumentNullException(nameof(type));
 
             return value != null
-                ? JsonConvert.DeserializeObject(value, type, _serializerSettings)
+                ? JsonConvert.DeserializeObject(value, type, new JobConverter())
                 : null;
         }
 
@@ -61,8 +61,7 @@ namespace Pulse.Core.Common
 
         public static DateTime DeserializeDateTime(string value)
         {
-            long timestamp;
-            if (long.TryParse(value, out timestamp))
+            if (long.TryParse(value, out long timestamp))
             {
                 return FromTimestamp(timestamp);
             }

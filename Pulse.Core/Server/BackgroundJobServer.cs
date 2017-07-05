@@ -24,12 +24,10 @@ namespace Pulse.Core.Server
 
         public BackgroundJobServer(BackgroundJobServerOptions options, DataStorage storage, IEnumerable<IBackgroundProcess> additionalProcesses)
         {
-            if (options == null) throw new ArgumentNullException(nameof(options));
-            if (storage == null) throw new ArgumentNullException(nameof(storage));
             if (additionalProcesses == null) throw new ArgumentNullException(nameof(additionalProcesses));
 
-            this._options = options;
-            this._storage = storage;
+            this._options = options ?? throw new ArgumentNullException(nameof(options));
+            this._storage = storage ?? throw new ArgumentNullException(nameof(storage));
 
             var properties = new Dictionary<string, object>
             {
@@ -116,8 +114,7 @@ namespace Pulse.Core.Server
 
             if (properties.ContainsKey("Queues"))
             {
-                var array = properties["Queues"] as string[];
-                if (array != null)
+                if (properties["Queues"] is string[] array)
                 {
                     serverContext.Queues = array;
                 }

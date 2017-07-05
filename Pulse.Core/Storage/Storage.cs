@@ -47,7 +47,8 @@ namespace Pulse.Core.Storage
 
         public abstract QueueJob FetchNextJob(string[] queue, string workerId);
 
-        public abstract int CreateAndEnqueue(QueueJob queueJob);
+        public abstract int CreateAndEnqueueJob(QueueJob queueJob);
+        public abstract void CreateAndEnqueueWorkflow(Workflow workflow);
         public abstract void InsertAndSetJobState(int jobId, IState state);
         public abstract void InsertAndSetJobStates(int jobId, params IState[] state);
         public abstract void UpgradeStateToScheduled(int jobId, IState oldState, IState scheduledState, DateTime nextRun, int retryCount);

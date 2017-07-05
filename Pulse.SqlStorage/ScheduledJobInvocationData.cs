@@ -17,17 +17,17 @@ namespace Pulse.SqlStorage
 
         public int MaxRetries { get; set; } = 10;
 
-        public string InvocationData { get; set; }
+        public Job Job { get; set; }
                 
 
-        public static ScheduledJobInvocationData FromQueueJob(QueueJob job)
+        public static ScheduledJobInvocationData FromQueueJob(QueueJob queueJob)
         {
             return new ScheduledJobInvocationData()
             {
-                ContextId = job.ContextId,
-                InvocationData = JobHelper.ToJson(Pulse.Core.Storage.InvocationData.Serialize(job.Job)),
-                MaxRetries = job.MaxRetries,
-                Queue = job.QueueName
+                ContextId = queueJob.ContextId,
+                Job = queueJob.Job,
+                MaxRetries = queueJob.MaxRetries,
+                Queue = queueJob.QueueName
             };
         }
 

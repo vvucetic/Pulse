@@ -23,8 +23,7 @@ namespace Pulse.Core.Server
 
         public CoreBackgroundJobPerformer(JobActivator activator)
         {
-            if (activator == null) throw new ArgumentNullException(nameof(activator));
-            _activator = activator;
+            _activator = activator ?? throw new ArgumentNullException(nameof(activator));
         }
 
         public object Perform(PerformContext context)
@@ -86,9 +85,7 @@ namespace Pulse.Core.Server
                 var methodInfo = context.QueueJob.Job.Method;
                 var result = methodInfo.Invoke(instance, arguments);
 
-                var task = result as Task;
-
-                if (task != null)
+                if (result is Task task)
                 {
                     task.Wait();
 

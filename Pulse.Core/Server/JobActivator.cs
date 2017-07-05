@@ -15,12 +15,7 @@ namespace Pulse.Core.Server
             get { return _current; }
             set
             {
-                if (value == null)
-                {
-                    throw new ArgumentNullException(nameof(value));
-                }
-
-                _current = value;
+                _current = value ?? throw new ArgumentNullException(nameof(value));
             }
         }
 

@@ -25,8 +25,9 @@ namespace Pulse.Core
 
         public int CreateAndEnqueue(Job job, string queue = "default", int maxRetries = 10)
         {
+            if(job == null) throw new ArgumentException("Job must not be empty", nameof(job));
             if (string.IsNullOrEmpty(queue)) throw new ArgumentException("Queue must not be empty", nameof(queue));
-            return _storage.CreateAndEnqueue(new QueueJob()
+            return _storage.CreateAndEnqueueJob(new QueueJob()
             {
                 ContextId = null,
                 Job = job,
@@ -34,6 +35,12 @@ namespace Pulse.Core
                 QueueName = queue,
                 MaxRetries = maxRetries
             });
+        }
+
+        public void CreateAndEnqueue(Workflow workflow)
+        {
+            if (workflow == null) throw new ArgumentException("Workflow must not be empty", nameof(workflow));
+            _storage.CreateAndEnqueueWorkflow(workflow);
         }
     }
 }

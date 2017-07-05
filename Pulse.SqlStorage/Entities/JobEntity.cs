@@ -34,9 +34,7 @@ namespace Pulse.SqlStorage.Entities
         public string NextJobs { get; set; }
 
         public Guid? ContextId { get; set; }
-
-        public int NumberOfConditionJobs { get; set; }
-
+        
         public int MaxRetries { get; set; }
 
         public int RetryCount { get; set; }
@@ -56,7 +54,6 @@ namespace Pulse.SqlStorage.Entities
                 MaxRetries = scheduledJob.QueueJob.MaxRetries,
                 InvocationData = JobHelper.ToJson(Pulse.Core.Storage.InvocationData.Serialize(scheduledJob.QueueJob.Job)),
                 NextJobs = JobHelper.ToJson(scheduledJob.QueueJob.NextJobs),
-                NumberOfConditionJobs = scheduledJob.QueueJob.NumberOfConditionJobs,
                 RetryCount = 1,
                 NextRetry = scheduledJob.QueueJob.NextRetry,
                 Queue = scheduledJob.QueueJob.QueueName
