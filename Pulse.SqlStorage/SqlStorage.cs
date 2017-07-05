@@ -75,26 +75,8 @@ namespace Pulse.SqlStorage
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    var insertedJob = new JobEntity()
-                    {
-                        ContextId = queueJob.ContextId,
-                        CreatedAt = DateTime.UtcNow,
-                        InvocationData = JobHelper.ToJson(InvocationData.Serialize(queueJob.Job)),
-                        NextJobs = JobHelper.ToJson(queueJob.NextJobs),
-                        RetryCount = 1,
-                        MaxRetries = queueJob.MaxRetries,
-                        NextRetry = queueJob.NextRetry,
-                        ExpireAt = queueJob.ExpireAt,
-                        Queue = queueJob.QueueName
-                    };
-                    var jobId = this._queryService.InsertJob(insertedJob, db);
-                    var stateId = this._queryService.InsertJobState(
-                        StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = queueJob.QueueName, Reason = "Job enqueued" }, 
-                        insertedJob.Id), 
-                        db);
-                    this._queryService.SetJobState(jobId, stateId, EnqueuedState.DefaultName, db);
-                    this._queryService.InsertJobToQueue(jobId, queueJob.QueueName, db);
-                    
+                    var state = new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = queueJob.QueueName, Reason = "Job enqueued" };
+                    var jobId = CreateAndEnqueueJob(queueJob, state, db);                    
                     tran.Complete();
                     return jobId;
                 }
@@ -121,8 +103,19 @@ namespace Pulse.SqlStorage
                 insertedJob.Id),
                 db);
             this._queryService.SetJobState(jobId, stateId, state.Name, db);
-            this._queryService.InsertJobToQueue(jobId, queueJob.QueueName, db);
-            
+            if (state is EnqueuedState)
+            {
+                this._queryService.InsertJobToQueue(jobId, queueJob.QueueName, db);
+            }
+            foreach (var nextJob in queueJob.NextJobs)
+            {
+                this._queryService.InsertJobCondition(new JobConditionEntity()
+                {
+                    Finished = false,
+                    JobId = nextJob,
+                    ParentJobId = jobId
+                }, db);
+            }
             return jobId;
         }
 
@@ -138,10 +131,12 @@ namespace Pulse.SqlStorage
                             queueJob: workflowJob.QueueJob,
                             state: rootJobs.ContainsKey(workflowJob.TempId) ? 
                                 new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = "Automatically enqueued as part of workflow because not parent jobs to wait for."  } as IState
-                                : new AwaitingState() { Reason = "Waiting for other job/s to finish." } as IState,
+                                : new AwaitingState() { Reason = "Waiting for other job/s to finish.",  CreatedAt = DateTime.UtcNow } as IState,
                             db: db
                             );
                     });
+                    
+                    tran.Complete();
                 }
             }
         }

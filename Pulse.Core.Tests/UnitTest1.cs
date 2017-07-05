@@ -78,5 +78,25 @@ namespace Pulse.Core.Tests
             var json = wf.Serialize();
             var jobs = wf.GetAllJobs().ToList();
         }
+
+        [TestMethod]
+        public void CreateWorkflow()
+        {
+            GlobalConfiguration.Configuration.UseSqlServerStorage("db");
+            var rootJob = WorkflowJob.MakeJob(() => RecurringMethod("1 task", 1));
+
+            rootJob.ContinueWith(WorkflowJob.MakeJob(() => RecurringMethod("2 task", 2)))
+                .ContinueWithGroup(
+                    WorkflowJobGroup.RunInParallel(
+                            WorkflowJob.MakeJob(() => RecurringMethod("3 task", 3)),
+                            WorkflowJob.MakeJob(() => RecurringMethod("4 task", 4))
+                        )).ContinueWith(
+                WorkflowJob.MakeJob(() => RecurringMethod("5 task", 5)
+                ));
+
+            var wf = new Workflow(rootJob);
+            var client = new BackgroundJobClient();
+            client.CreateAndEnqueue(wf);
+        }
     }
 }

@@ -92,30 +92,38 @@ namespace Pulse.Core.Common
         {
             if(this._rootWorkflowJob != null)
             {
-                var savedIds = new HashSet<Guid>();
+                var savedIds = new Dictionary<Guid, int>();
                 SaveRecursiely(this._rootWorkflowJob, saveJob, savedIds);
-                saveJob(this._rootWorkflowJob);
+                var jobId = saveJob(this._rootWorkflowJob);
+                this._rootWorkflowJob.QueueJob.JobId = jobId;
             }
+            //TODO Save workflow when job group
         }
 
-        private void SaveRecursiely(WorkflowJob wfJob, Func<WorkflowJob, int> saveJob, HashSet<Guid> savedIds)
+        private void SaveRecursiely(WorkflowJob wfJob, Func<WorkflowJob, int> saveJob, Dictionary<Guid, int> savedIds)
         {
-            if (wfJob.NextJobs.Any())
-            {
-                wfJob.QueueJob.NextJobs = SaveJobs(wfJob.NextJobs, saveJob, savedIds).ToList();
-            }
             foreach (var job in wfJob.NextJobs)
             {
                 SaveRecursiely(job, saveJob, savedIds);
+
             }
+            wfJob.QueueJob.NextJobs = SaveJobs(wfJob.NextJobs, saveJob, savedIds).ToList();
+
         }
 
-        private IEnumerable<int> SaveJobs(IEnumerable<WorkflowJob> jobs, Func<WorkflowJob, int> saveJob, HashSet<Guid> savedIds)
+        private IEnumerable<int> SaveJobs(IEnumerable<WorkflowJob> jobs, Func<WorkflowJob, int> saveJob, Dictionary<Guid, int> savedIds)
         {
-            foreach (var job in jobs.Where(t => !savedIds.Contains(t.TempId)))
+            foreach (var job in jobs)
             {
-                savedIds.Add(job.TempId);
-                yield return saveJob(job);
+                if (savedIds.ContainsKey(job.TempId))
+                    yield return savedIds[job.TempId];
+                else
+                {
+                    var jobId = saveJob(job);
+                    savedIds.Add(job.TempId, jobId);
+                    job.QueueJob.JobId = jobId;
+                    yield return jobId;
+                }
             }
         }
 

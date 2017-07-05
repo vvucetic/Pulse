@@ -9,12 +9,12 @@ using System.Threading.Tasks;
 namespace Pulse.SqlStorage.Entities
 {
     [TableName("JobCondition")]
-    [PrimaryKey(new[] { "JobId", "LinkedJobId" }, AutoIncrement = false)]
+    [PrimaryKey(new[] { "JobId", "ParentJobId" }, AutoIncrement = false)]
     public class JobConditionEntity
     {
         public int JobId { get; set; }
 
-        public int LinkedJobId { get; set; }
+        public int ParentJobId { get; set; }
 
         public bool Finished { get; set; }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Pulse.Core.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,9 +15,14 @@ namespace Pulse.Core.States
 
         public bool IsFinal => false;
 
+        public DateTime CreatedAt { get; set; }
+
         public Dictionary<string, string> SerializeData()
         {
-            throw new NotImplementedException();
+            return new Dictionary<string, string>
+            {
+                { "CreatedAt",  JobHelper.SerializeDateTime(CreatedAt) }
+            };            
         }
     }
 }

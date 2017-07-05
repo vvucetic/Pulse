@@ -150,6 +150,11 @@ when matched then update set Cron = Source.Cron, LastInvocation = Source.LastInv
 when not matched then insert(Name, Cron, LastInvocation, NextInvocation, JobInvocationData, WorkflowInvocationData) values(Source.Name,Source.Cron,Source.LastInvocation,Source.NextInvocation,Source.JobInvocationData,Source.WorkflowInvocationData);
 ";
             return db.Execute(sql, new { name = job.Name, cron = job.Cron, lastInvocation = job.LastInvocation, nextInvocation = job.NextInvocation, jobInvocationData = JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(job)), workflowInvocationData = "" });
-        }        
+        }
+
+        public void InsertJobCondition(JobConditionEntity jobCondition, Database db)
+        {
+            db.Insert<JobConditionEntity>(jobCondition);
+        }
     }
 }
