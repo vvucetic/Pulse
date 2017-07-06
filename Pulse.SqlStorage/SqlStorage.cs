@@ -63,7 +63,8 @@ namespace Pulse.SqlStorage
                         MaxRetries = jobEntity.MaxRetries,
                         NextRetry = jobEntity.NextRetry,
                         RetryCount = jobEntity.RetryCount,
-                        WorkerId = fetchedJob.WorkerId
+                        WorkerId = fetchedJob.WorkerId,
+                        WorkflowId = jobEntity.WorkflowId
                     };
                 }
             }
@@ -95,7 +96,8 @@ namespace Pulse.SqlStorage
                 MaxRetries = queueJob.MaxRetries,
                 NextRetry = queueJob.NextRetry,
                 ExpireAt = queueJob.ExpireAt,
-                Queue = queueJob.QueueName
+                Queue = queueJob.QueueName,
+                WorkflowId = queueJob.WorkflowId
             };
             var jobId = this._queryService.InsertJob(insertedJob, db);
             var stateId = this._queryService.InsertJobState(
@@ -336,6 +338,27 @@ namespace Pulse.SqlStorage
                     var result = this._queryService.CreateOrUpdateRecurringJob(job, db);
                     tran.Complete();
                     return result;
+                }
+            }
+        }
+
+        public override void FinishJobAndEnqueueNext(int jobId)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    var nextJobs = this._queryService.MarkAsFinishedAndGetNextJobs(jobId, db);
+                    foreach (var job in nextJobs)
+                    {
+                        var stateId = this._queryService.InsertJobState(
+                                                    StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = job.Queue, Reason = "Job enqueued after awaited job successfully finished." },
+                                                    job.Id),
+                                                    db);
+                        this._queryService.SetJobState(job.Id, stateId, EnqueuedState.DefaultName, db);
+                        this._queryService.InsertJobToQueue(job.Id, job.Queue, db);
+                    }
+                    tran.Complete();
                 }
             }
         }

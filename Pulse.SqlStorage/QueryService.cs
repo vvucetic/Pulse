@@ -1,5 +1,6 @@
 ﻿using NPoco;
 using Pulse.Core.Common;
+using Pulse.Core.States;
 using Pulse.SqlStorage.Entities;
 using System;
 using System.Collections.Generic;
@@ -155,6 +156,23 @@ when not matched then insert(Name, Cron, LastInvocation, NextInvocation, JobInvo
         public void InsertJobCondition(JobConditionEntity jobCondition, Database db)
         {
             db.Insert<JobConditionEntity>(jobCondition);
+        }
+
+        public List<JobEntity> MarkAsFinishedAndGetNextJobs(int jobId, Database db)
+        {
+            var sql = @";DECLARE @@Ids table(Id int)
+UPDATE jc
+   SET jc.[Finished] = 1
+      ,jc.[FinishedAt] = GETUTCDATE()
+OUTPUT inserted.JobId INTO @@Ids 
+FROM [dbo].JobCondition jc
+WHERE jc.ParentJobId = @jobId
+
+SELECT * FROM Job j
+WHERE State = @state AND 
+j.Id IN (SELECT * FROM @@Ids) AND
+NOT EXISTS (SELECT * FROM JobCondition jc WHERE jc.JobId = j.Id AND jc.Finished = 0)";
+            return db.Query<JobEntity>(sql, new { jobId = jobId, state = AwaitingState.DefaultName }).ToList();
         }
     }
 }

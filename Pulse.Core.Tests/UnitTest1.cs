@@ -75,7 +75,7 @@ namespace Pulse.Core.Tests
 
             var wf = new Workflow(rootJob);
             wf.SaveWorkflow((t) => { t.QueueJob.JobId = (int)t.QueueJob.Job.Arguments[1]; Debug.WriteLine($"SAved: {t.QueueJob.JobId} - {t.QueueJob.Job.Arguments[0]}"); return (int)t.QueueJob.Job.Arguments[1]; });
-            var json = wf.Serialize();
+
             var jobs = wf.GetAllJobs().ToList();
         }
 
@@ -85,18 +85,55 @@ namespace Pulse.Core.Tests
             GlobalConfiguration.Configuration.UseSqlServerStorage("db");
             var rootJob = WorkflowJob.MakeJob(() => RecurringMethod("1 task", 1));
 
-            rootJob.ContinueWith(WorkflowJob.MakeJob(() => RecurringMethod("2 task", 2)))
-                .ContinueWithGroup(
-                    WorkflowJobGroup.RunInParallel(
-                            WorkflowJob.MakeJob(() => RecurringMethod("3 task", 3)),
-                            WorkflowJob.MakeJob(() => RecurringMethod("4 task", 4))
-                        )).ContinueWith(
-                WorkflowJob.MakeJob(() => RecurringMethod("5 task", 5)
-                ));
+            //rootJob.ContinueWith(WorkflowJob.MakeJob(() => RecurringMethod("2 task", 2))
+            //    .ContinueWithGroup(
+            //        WorkflowJob.MakeJob(() => RecurringMethod("3 task", 3)),
+            //        WorkflowJob.MakeJob(() => RecurringMethod("4 task", 4))
+            //    ).ContinueWith(WorkflowJob.MakeJob(() => RecurringMethod("5 task", 5))));
 
             var wf = new Workflow(rootJob);
             var client = new BackgroundJobClient();
             client.CreateAndEnqueue(wf);
+        }
+
+        [TestMethod]
+        public void CreateWorkflow2()
+        {
+            //GlobalConfiguration.Configuration.UseSqlServerStorage("db");
+            //var rootJobGroup = WorkflowJobGroup.RunInParallel( 
+            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.1 task")),
+            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.2 task")),
+            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.3 task")),
+            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.4 task")),
+            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.5 task"))
+            //        //.ContinueWith(WorkflowJob.MakeJob(() => WorkflowMethod("1.5.1 task")))
+            //        //    .ContinueWithGroup(
+            //        //        WorkflowJobGroup.RunInParallel(
+            //        //                WorkflowJob.MakeJob(() => WorkflowMethod("1.5.1.1 task"))
+            //        //            )
+            //        //    )
+            //        //,
+            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.6 task")),
+            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.7 task"))
+            //    );
+
+
+
+            //var wf = new Workflow(rootJobGroup);
+            //var client = new BackgroundJobClient();
+            //client.CreateAndEnqueue(wf);
+        }
+
+        private void WorkflowMethod(string message)
+        {
+            Debug.WriteLine($"Workflow method - {message}!");
+        }
+
+        [TestMethod]
+        public void TestSerialization()
+        {
+            var rootJob = WorkflowJob.MakeJob(() => RecurringMethod("1 task", 1));
+            var test = JobHelper.ToJson(rootJob.QueueJob);
         }
     }
 }

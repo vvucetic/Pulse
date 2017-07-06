@@ -62,6 +62,7 @@ namespace Pulse.Core.Storage
         public abstract int RemoveTimedOutServers(TimeSpan timeout);
         public abstract bool EnqueueNextScheduledItem(Func<ScheduledJob, ScheduledJob> caluculateNext);
         public abstract int CreateOrUpdateRecurringJob(ScheduledJob job);
+        public abstract void FinishJobAndEnqueueNext(int jobId);
         public virtual void WriteOptionsToLog(ILog logger)
         {
 

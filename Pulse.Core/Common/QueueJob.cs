@@ -17,9 +17,7 @@ namespace Pulse.Core.Common
         public List<int> NextJobs { get; set; } = new List<int>();
 
         public Guid? ContextId { get; set; }
-
-        public int NumberOfConditionJobs { get; set; }
-
+        
         public Job Job { get; set; }
 
         public DateTime? FetchedAt { get; set; }
@@ -35,5 +33,7 @@ namespace Pulse.Core.Common
         public DateTime? NextRetry { get; set; }
 
         public string WorkerId { get; set; }
+
+        public Guid? WorkflowId { get; set; }
     }
 }

@@ -31,16 +31,25 @@ namespace Pulse.Core.Common
         public WorkflowJob ContinueWith(WorkflowJob workflowJob)
         {
             this.NextJobs.Add(workflowJob);
-            return workflowJob;
+            return this;
         }
 
-        public WorkflowJobGroup ContinueWithGroup(WorkflowJobGroup workflowJobGroup)
+        public WorkflowJobGroup ContinueWithGroup(params WorkflowJob[] workflowJobs)
+        {
+            foreach (var job in workflowJobs)
+            {
+                this.NextJobs.Add(job);
+            }
+            return new WorkflowJobGroup() { Jobs = workflowJobs.ToList() };
+        }
+
+        public WorkflowJob ContinueWithGroup(WorkflowJobGroup workflowJobGroup)
         {
             foreach (var job in workflowJobGroup.Jobs)
             {
                 this.NextJobs.Add(job);
             }
-            return workflowJobGroup;
+            return this;
         }
 
         public override string ToString() => $"TempID: {TempId}, JobId: {QueueJob.JobId}, NextJobs: {string.Join(",", NextJobs.Select(t=>t.QueueJob.JobId))}";

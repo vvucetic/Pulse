@@ -9,7 +9,8 @@ namespace Pulse.Core.States
 {
     public class AwaitingState : IState
     {
-        public string Name => "Awaiting";
+        public static string DefaultName = "Awaiting";
+        public string Name => AwaitingState.DefaultName;
 
         public string Reason { get; set; }
 

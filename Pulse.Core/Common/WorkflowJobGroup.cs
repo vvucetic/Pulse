@@ -17,13 +17,13 @@ namespace Pulse.Core.Common
             };
         }
 
-        public WorkflowJob ContinueWith(WorkflowJob workflowJob)
+        public WorkflowJobGroup ContinueWith(WorkflowJob workflowJob)
         {
             foreach (var job in this.Jobs)
             {
                 job.NextJobs.Add(workflowJob);
             }
-            return workflowJob;
+            return this;
         }
     }
 }

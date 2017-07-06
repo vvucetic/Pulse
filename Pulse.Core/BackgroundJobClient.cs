@@ -31,7 +31,6 @@ namespace Pulse.Core
             {
                 ContextId = null,
                 Job = job,
-                NumberOfConditionJobs = 0,
                 QueueName = queue,
                 MaxRetries = maxRetries
             });

@@ -10,27 +10,42 @@ namespace Pulse.Core.Common
 {
     public class Workflow
     {
-        private readonly string _name;
-        private readonly Guid? _contextId;
+        public string Name { get; set; }
+
+        public Guid? ContextId { get; set; }
+
+        public Guid WorkflowId { get; } = Guid.NewGuid();
+
         private readonly WorkflowJob _rootWorkflowJob;
+
         private readonly WorkflowJobGroup _rootWorkflowJobGroup;
 
 
         public Workflow(WorkflowJob workflowJob, Guid? contextId = null)
         {
+            this.ContextId = contextId;
             this._rootWorkflowJob = workflowJob;
             if (contextId != null)
             {
-                GetAllJobs().ForEach(t => t.QueueJob.ContextId = contextId);
+                GetAllJobs().ForEach(t =>
+                {
+                    t.QueueJob.ContextId = this.ContextId;
+                    t.QueueJob.WorkflowId = this.WorkflowId;
+                });
             }
         }
 
         public Workflow(WorkflowJobGroup wfGroup, Guid? contextId = null)
         {
+            this.ContextId = contextId;
             this._rootWorkflowJobGroup = wfGroup;
             if (contextId != null)
             {
-                GetAllJobs().ForEach(t => t.QueueJob.ContextId = contextId);
+                GetAllJobs().ForEach(t => 
+                {
+                    t.QueueJob.ContextId = this.ContextId;
+                    t.QueueJob.WorkflowId = this.WorkflowId;
+                });
             }
         }
 
@@ -97,7 +112,16 @@ namespace Pulse.Core.Common
                 var jobId = saveJob(this._rootWorkflowJob);
                 this._rootWorkflowJob.QueueJob.JobId = jobId;
             }
-            //TODO Save workflow when job group
+            else if(this._rootWorkflowJobGroup != null)
+            {
+                var savedIds = new Dictionary<Guid, int>();
+                foreach (var job in this._rootWorkflowJobGroup.Jobs)
+                {
+                    SaveRecursiely(job, saveJob, savedIds);
+                    var jobId = saveJob(job);
+                    job.QueueJob.JobId = jobId;
+                }
+            }
         }
 
         private void SaveRecursiely(WorkflowJob wfJob, Func<WorkflowJob, int> saveJob, Dictionary<Guid, int> savedIds)
@@ -126,11 +150,6 @@ namespace Pulse.Core.Common
                 }
             }
         }
-
-        public string Serialize()
-        {
-            return JsonConvert.SerializeObject(_rootWorkflowJob, Formatting.None, new JobConverter());
-        }
-
+        
     }
 }

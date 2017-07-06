@@ -39,7 +39,6 @@ namespace Pulse.SqlStorage.Entities
                     ContextId = jobInvocationData.ContextId,
                     MaxRetries = jobInvocationData.MaxRetries,
                     QueueName = jobInvocationData.Queue,
-                    NumberOfConditionJobs = 0,
                     CreatedAt = DateTime.UtcNow,
                     NextJobs = new List<int>(),
                     RetryCount = 1
