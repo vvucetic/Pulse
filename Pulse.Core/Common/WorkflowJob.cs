@@ -34,20 +34,29 @@ namespace Pulse.Core.Common
             return this;
         }
 
-        public WorkflowJobGroup ContinueWithGroup(params WorkflowJob[] workflowJobs)
-        {
-            foreach (var job in workflowJobs)
-            {
-                this.NextJobs.Add(job);
-            }
-            return new WorkflowJobGroup() { Jobs = workflowJobs.ToList() };
-        }
+        //public WorkflowJobGroup ContinueWithGroup(params WorkflowJob[] workflowJobs)
+        //{
+        //    foreach (var job in workflowJobs)
+        //    {
+        //        this.NextJobs.Add(job);
+        //    }
+        //    return new WorkflowJobGroup() { Jobs = workflowJobs.ToList() };
+        //}
 
         public WorkflowJob ContinueWithGroup(WorkflowJobGroup workflowJobGroup)
         {
             foreach (var job in workflowJobGroup.Jobs)
             {
                 this.NextJobs.Add(job);
+            }
+            return this;
+        }
+
+        public WorkflowJob WaitFor(params WorkflowJob[] jobs)
+        {
+            foreach (var job in jobs)
+            {
+                job.NextJobs.Add(this);
             }
             return this;
         }

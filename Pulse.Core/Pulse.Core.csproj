@@ -118,6 +118,7 @@
     <Compile Include="Server\SimpleJobActivatorScope.cs" />
     <Compile Include="Server\Processes\WorkerProcess.cs" />
     <Compile Include="States\AwaitingState.cs" />
+    <Compile Include="States\ConsequentlyFailed.cs" />
     <Compile Include="States\EnqueuedState.cs" />
     <Compile Include="States\FailedState.cs" />
     <Compile Include="States\IState.cs" />

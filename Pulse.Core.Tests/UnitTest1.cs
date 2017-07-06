@@ -83,7 +83,25 @@ namespace Pulse.Core.Tests
         public void CreateWorkflow()
         {
             GlobalConfiguration.Configuration.UseSqlServerStorage("db");
-            var rootJob = WorkflowJob.MakeJob(() => RecurringMethod("1 task", 1));
+
+            var job1 = WorkflowJob.MakeJob(() => WorkflowMethod("1 task"));
+            var job2 = WorkflowJob.MakeJob(() => WorkflowMethod("2 task"));
+            var job31 = WorkflowJob.MakeJob(() => WorkflowMethod("3.1 task"));
+            var job32 = WorkflowJob.MakeJob(() => WorkflowMethod("3.2 task"));
+            var job321 = WorkflowJob.MakeJob(() => WorkflowMethod("3.2.1 task"));
+            var group = WorkflowJobGroup.RunInParallel(
+                job31,
+                job32
+                );
+
+            var job4 = WorkflowJob.MakeJob(() => WorkflowMethod("4 task"));
+            var job5 = WorkflowJob.MakeJob(() => WorkflowMethod("5 task"));
+
+            job1.ContinueWith(job2);
+            job2.ContinueWithGroup(group);
+            group.ContinueWith(job4);
+            job4.ContinueWith(job5);
+            job32.ContinueWith(job321);
 
             //rootJob.ContinueWith(WorkflowJob.MakeJob(() => RecurringMethod("2 task", 2))
             //    .ContinueWithGroup(
@@ -91,7 +109,7 @@ namespace Pulse.Core.Tests
             //        WorkflowJob.MakeJob(() => RecurringMethod("4 task", 4))
             //    ).ContinueWith(WorkflowJob.MakeJob(() => RecurringMethod("5 task", 5))));
 
-            var wf = new Workflow(rootJob);
+            var wf = new Workflow(job1);
             var client = new BackgroundJobClient();
             client.CreateAndEnqueue(wf);
         }
@@ -99,34 +117,39 @@ namespace Pulse.Core.Tests
         [TestMethod]
         public void CreateWorkflow2()
         {
-            //GlobalConfiguration.Configuration.UseSqlServerStorage("db");
-            //var rootJobGroup = WorkflowJobGroup.RunInParallel( 
-            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.1 task")),
-            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.2 task")),
-            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.3 task")),
-            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.4 task")),
-            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.5 task"))
-            //        //.ContinueWith(WorkflowJob.MakeJob(() => WorkflowMethod("1.5.1 task")))
-            //        //    .ContinueWithGroup(
-            //        //        WorkflowJobGroup.RunInParallel(
-            //        //                WorkflowJob.MakeJob(() => WorkflowMethod("1.5.1.1 task"))
-            //        //            )
-            //        //    )
-            //        //,
-            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.6 task")),
-            //    WorkflowJob.MakeJob(() => WorkflowMethod("1.7 task"))
-            //    );
+            var dl = WorkflowJob.MakeJob(() => WorkflowMethod("Download"));
+            var co1 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 1"));
+            var co2 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 2"));
+            var co3 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 3"));
+            var se1 = WorkflowJob.MakeJob(() => WorkflowMethod("Send email 1"));
+            var se3 = WorkflowJob.MakeJob(() => FailingWorkflowMethod("Send email 3"));
+            var de = WorkflowJob.MakeJob(() => WorkflowMethod("Delete email"));
 
+            de.WaitFor(se1, co2, se3);
+            co1.ContinueWith(se1);
+            co3.ContinueWith(se3);
+            var group = WorkflowJobGroup.RunInParallel(co1, co2, co3);
+            dl.ContinueWithGroup(group);
 
+            var wf = new Workflow(dl);
+            GlobalConfiguration.Configuration.UseSqlServerStorage("db");
 
-            //var wf = new Workflow(rootJobGroup);
-            //var client = new BackgroundJobClient();
-            //client.CreateAndEnqueue(wf);
+            var client = new BackgroundJobClient();
+            client.CreateAndEnqueue(wf);
         }
 
         private void WorkflowMethod(string message)
         {
+            var rand = new Random(Guid.NewGuid().GetHashCode());
+            Thread.Sleep(rand.Next(1000, 10000));
             Debug.WriteLine($"Workflow method - {message}!");
+        }
+
+        private void FailingWorkflowMethod(string message)
+        {
+            var rand = new Random(Guid.NewGuid().GetHashCode());
+            Thread.Sleep(rand.Next(1000, 10000));
+            throw new Exception("Failed with: " + message);
         }
 
         [TestMethod]

@@ -25,28 +25,24 @@ namespace Pulse.Core.Common
         {
             this.ContextId = contextId;
             this._rootWorkflowJob = workflowJob;
-            if (contextId != null)
+
+            GetAllJobs().ForEach(t =>
             {
-                GetAllJobs().ForEach(t =>
-                {
-                    t.QueueJob.ContextId = this.ContextId;
-                    t.QueueJob.WorkflowId = this.WorkflowId;
-                });
-            }
+                t.QueueJob.ContextId = this.ContextId;
+                t.QueueJob.WorkflowId = this.WorkflowId;
+            });
         }
 
         public Workflow(WorkflowJobGroup wfGroup, Guid? contextId = null)
         {
             this.ContextId = contextId;
             this._rootWorkflowJobGroup = wfGroup;
-            if (contextId != null)
+
+            GetAllJobs().ForEach(t => 
             {
-                GetAllJobs().ForEach(t => 
-                {
-                    t.QueueJob.ContextId = this.ContextId;
-                    t.QueueJob.WorkflowId = this.WorkflowId;
-                });
-            }
+                t.QueueJob.ContextId = this.ContextId;
+                t.QueueJob.WorkflowId = this.WorkflowId;
+            });            
         }
 
         public List<WorkflowJob> GetRootJobs()
