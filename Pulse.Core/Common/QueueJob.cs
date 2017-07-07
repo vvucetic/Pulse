@@ -35,5 +35,7 @@ namespace Pulse.Core.Common
         public string WorkerId { get; set; }
 
         public Guid? WorkflowId { get; set; }
+
+        public string ScheduleName { get; set; }
     }
 }

@@ -64,7 +64,8 @@ namespace Pulse.SqlStorage
                         NextRetry = jobEntity.NextRetry,
                         RetryCount = jobEntity.RetryCount,
                         WorkerId = fetchedJob.WorkerId,
-                        WorkflowId = jobEntity.WorkflowId
+                        WorkflowId = jobEntity.WorkflowId,
+                        ScheduleName = jobEntity.ScheduleName
                     };
                 }
             }
@@ -97,7 +98,8 @@ namespace Pulse.SqlStorage
                 NextRetry = queueJob.NextRetry,
                 ExpireAt = queueJob.ExpireAt,
                 Queue = queueJob.QueueName,
-                WorkflowId = queueJob.WorkflowId
+                WorkflowId = queueJob.WorkflowId,
+                ScheduleName = queueJob.ScheduleName
             };
             var jobId = this._queryService.InsertJob(insertedJob, db);
             var stateId = this._queryService.InsertJobState(
@@ -311,6 +313,7 @@ namespace Pulse.SqlStorage
                         scheduleEntity.NextInvocation = scheduledTask.NextInvocation;
                         this._queryService.UpdateScheduledItem(scheduleEntity, t => new { t.LastInvocation, t.NextInvocation }, db);
                         var insertedJob = JobEntity.FromScheduleEntity(scheduledTask);
+                        insertedJob.ScheduleName = scheduleEntity.Name;
                         var jobId = this._queryService.InsertJob(insertedJob, db);
                         var stateId = this._queryService.InsertJobState(
                             StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = scheduledTask.Job.QueueName, Reason = "Job enqueued by Recurring Scheduler" },
@@ -332,6 +335,7 @@ namespace Pulse.SqlStorage
 
                         var rootJobs = scheduledTask.Workflow.GetRootJobs().ToDictionary(t => t.TempId, null);
                         scheduledTask.Workflow.SaveWorkflow((workflowJob) => {
+                            workflowJob.QueueJob.ScheduleName = scheduleEntity.Name;
                             return CreateAndEnqueueJob(
                                 queueJob: workflowJob.QueueJob,
                                 state: rootJobs.ContainsKey(workflowJob.TempId) ?

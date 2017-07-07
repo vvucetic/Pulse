@@ -45,6 +45,8 @@ namespace Pulse.SqlStorage.Entities
 
         public Guid? WorkflowId { get; set; }
 
+        public string ScheduleName { get; set; }
+
         public static JobEntity FromScheduleEntity(ScheduledTask scheduledJob)
         {
             return new JobEntity
