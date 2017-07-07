@@ -11,7 +11,7 @@ namespace Pulse.Core
     public static class RecurringJobManagerExtensions
     {
         public static void AddOrUpdate(
-            this IRecurringJobManager manager,
+            this IRecurringManager manager,
             string recurringJobId,
             Job job,
             string cronExpression)
@@ -20,7 +20,7 @@ namespace Pulse.Core
         }
 
         public static void AddOrUpdate(
-            this IRecurringJobManager manager,
+            this IRecurringManager manager,
             string recurringJobId,
             Job job,
             string cronExpression,
@@ -30,7 +30,7 @@ namespace Pulse.Core
         }
 
         public static void AddOrUpdate(
-            this IRecurringJobManager manager,
+            this IRecurringManager manager,
             string recurringJobId,
             Job job,
             string cronExpression,

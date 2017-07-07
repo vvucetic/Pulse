@@ -9,15 +9,15 @@ using NCrontab;
 
 namespace Pulse.Core
 {
-    public class RecurringJobManager : IRecurringJobManager
+    public class RecurringManager : IRecurringManager
     {
         private readonly DataStorage _storage;
 
-        public RecurringJobManager() : this(DataStorage.Current)
+        public RecurringManager() : this(DataStorage.Current)
         {
         }
 
-        public RecurringJobManager(DataStorage storage)
+        public RecurringManager(DataStorage storage)
         {
             this._storage = storage;
         }
@@ -31,13 +31,13 @@ namespace Pulse.Core
 
             ValidateCronExpression(cronExpression);
 
-            _storage.CreateOrUpdateRecurringJob(new ScheduledJob()
+            _storage.CreateOrUpdateRecurringTask(new ScheduledTask()
             {
                 Cron = cronExpression,
                 LastInvocation = DateTime.UtcNow,
                 Name = recurringJobId,
                 NextInvocation = CrontabSchedule.Parse(cronExpression).GetNextOccurrence(DateTime.UtcNow),
-                QueueJob = new QueueJob()
+                Job = new QueueJob()
                 {
                     Job = job,
                     QueueName = options.QueueName,
@@ -45,16 +45,34 @@ namespace Pulse.Core
                     ContextId = options.ContextId
                 }
             });
+        }
 
+        public void AddOrUpdate(string recurringJobId, Workflow workflow, string cronExpression)
+        {
+            if (recurringJobId == null) throw new ArgumentNullException(nameof(recurringJobId));
+            if (workflow == null) throw new ArgumentNullException(nameof(workflow));
+            if (cronExpression == null) throw new ArgumentNullException(nameof(cronExpression));
+
+            ValidateCronExpression(cronExpression);
+            _storage.CreateOrUpdateRecurringTask(new ScheduledTask()
+            {
+                Cron = cronExpression,
+                LastInvocation = DateTime.UtcNow,
+                Name = recurringJobId,
+                NextInvocation = CrontabSchedule.Parse(cronExpression).GetNextOccurrence(DateTime.UtcNow),
+                Workflow = workflow
+            });
         }
 
         public void RemoveIfExists(string recurringJobId)
         {
+            //TODO RemoveIfExists
             throw new NotImplementedException();
         }
 
         public void Trigger(string recurringJobId)
         {
+            //TODO Trigger
             throw new NotImplementedException();
         }
 
@@ -70,5 +88,6 @@ namespace Pulse.Core
                 throw new ArgumentException("CRON expression is invalid. Please see the inner exception for details.", nameof(cronExpression), ex);
             }
         }
+
     }
 }

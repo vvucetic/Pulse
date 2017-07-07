@@ -51,6 +51,7 @@ namespace Pulse.Core.Server.Processes
                 var failedState = resultState as FailedState;
                 if (queueJob.RetryCount < queueJob.MaxRetries)
                 {
+                    //schedule new run
                     var nextRun = DateTime.UtcNow.AddSeconds(SecondsToDelay(queueJob.RetryCount));
                     
                     const int maxMessageLength = 50;
@@ -65,14 +66,20 @@ namespace Pulse.Core.Server.Processes
                 }
                 else
                 {
+                    //final failed state
                     _storage.InsertAndSetJobState(queueJob.JobId, resultState);
+                    if(queueJob.WorkflowId.HasValue)
+                    {
+                        //mark dependent jobs consequently failed
+                        _storage.MarkConsequentlyFailedJobs(queueJob.JobId);
+                    }
                 }
             }
             else
             {
                 //Succeeded
                 _storage.InsertAndSetJobState(queueJob.JobId, resultState);
-                _storage.FinishJobAndEnqueueNext(queueJob.JobId);
+                _storage.FinishJobConditionAndEnqueueNext(queueJob.JobId);
             }
             _storage.RemoveFromQueue(queueJob.QueueJobId);
         }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Pulse.Core.States
 {
-    class ConsequentlyFailed : IState
+    public class ConsequentlyFailed : IState
     {
         public ConsequentlyFailed(string reason, int failedParentId)
         {

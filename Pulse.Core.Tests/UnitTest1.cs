@@ -118,11 +118,11 @@ namespace Pulse.Core.Tests
         public void CreateWorkflow2()
         {
             var dl = WorkflowJob.MakeJob(() => WorkflowMethod("Download"));
-            var co1 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 1"));
+            var co1 = WorkflowJob.MakeJob(() => FailingWorkflowMethod("Create object 1"), maxRetries: 1);
             var co2 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 2"));
             var co3 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 3"));
             var se1 = WorkflowJob.MakeJob(() => WorkflowMethod("Send email 1"));
-            var se3 = WorkflowJob.MakeJob(() => FailingWorkflowMethod("Send email 3"));
+            var se3 = WorkflowJob.MakeJob(() => WorkflowMethod("Send email 3"));
             var de = WorkflowJob.MakeJob(() => WorkflowMethod("Delete email"));
 
             de.WaitFor(se1, co2, se3);
@@ -136,6 +136,28 @@ namespace Pulse.Core.Tests
 
             var client = new BackgroundJobClient();
             client.CreateAndEnqueue(wf);
+        }
+
+        [TestMethod]
+        public void CreateRecurringWorkflow()
+        {
+            var dl = WorkflowJob.MakeJob(() => WorkflowMethod("Download"));
+            var co1 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 1"), maxRetries: 1);
+            var co2 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 2"));
+            var co3 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 3"));
+            var se1 = WorkflowJob.MakeJob(() => WorkflowMethod("Send email 1"));
+            var se3 = WorkflowJob.MakeJob(() => WorkflowMethod("Send email 3"));
+            var de = WorkflowJob.MakeJob(() => WorkflowMethod("Delete email"));
+
+            de.WaitFor(se1, co2, se3);
+            co1.ContinueWith(se1);
+            co3.ContinueWith(se3);
+            var group = WorkflowJobGroup.RunInParallel(co1, co2, co3);
+            dl.ContinueWithGroup(group);
+
+            var wf = new Workflow(dl);
+            GlobalConfiguration.Configuration.UseSqlServerStorage("db");
+            RecurringWorkflow.AddOrUpdate("test workflow", wf, Cron.MinuteInterval(1));
         }
 
         private void WorkflowMethod(string message)

@@ -141,7 +141,7 @@ WHERE s.NextInvocation < GETUTCDATE()";
             return db.Update<ScheduleEntity>(scheduleEntity, fields);
         }
 
-        public int CreateOrUpdateRecurringJob(ScheduledJob job, Database db)
+        public int CreateOrUpdateRecurringJob(ScheduledTask scheduledTask, Database db)
         {
             var sql =
 $@"; merge Schedule as Target
@@ -150,7 +150,7 @@ on Target.Name = Source.Name
 when matched then update set Cron = Source.Cron, LastInvocation = Source.LastInvocation, NextInvocation = Source.NextInvocation, JobInvocationData = Source.JobInvocationData, WorkflowInvocationData = Source.WorkflowInvocationData
 when not matched then insert(Name, Cron, LastInvocation, NextInvocation, JobInvocationData, WorkflowInvocationData) values(Source.Name,Source.Cron,Source.LastInvocation,Source.NextInvocation,Source.JobInvocationData,Source.WorkflowInvocationData);
 ";
-            return db.Execute(sql, new { name = job.Name, cron = job.Cron, lastInvocation = job.LastInvocation, nextInvocation = job.NextInvocation, jobInvocationData = JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(job)), workflowInvocationData = "" });
+            return db.Execute(sql, new { name = scheduledTask.Name, cron = scheduledTask.Cron, lastInvocation = scheduledTask.LastInvocation, nextInvocation = scheduledTask.NextInvocation, jobInvocationData = JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(scheduledTask)), workflowInvocationData = JobHelper.ToJson(scheduledTask.Workflow) });
         }
 
         public void InsertJobCondition(JobConditionEntity jobCondition, Database db)
@@ -173,6 +173,25 @@ WHERE State = @state AND
 j.Id IN (SELECT * FROM @@Ids) AND
 NOT EXISTS (SELECT * FROM JobCondition jc WHERE jc.JobId = j.Id AND jc.Finished = 0)";
             return db.Query<JobEntity>(sql, new { jobId = jobId, state = AwaitingState.DefaultName }).ToList();
+        }
+
+        /// <summary>
+        /// Recursively get all dependent jobs on given job
+        /// </summary>
+        /// <param name="jobs"></param>
+        /// <param name="db"></param>
+        /// <returns></returns>
+        public List<JobEntity> GetDependentWorkflowTree(int jobId, Database db)
+        {
+            var sql = @";with cte as 
+(
+    select * from JobCondition where ParentJobId=@jobId
+    union all
+    select t.* from cte 
+        inner join JobCondition t on cte.JobId = t.ParentJobId
+)
+SELECT * FROM Job j WHERE j.Id IN (SELECT JobId FROM cte)";
+            return db.Query<JobEntity>(sql, new { jobId = jobId }).ToList();
         }
     }
 }

@@ -6,11 +6,13 @@ using System.Threading.Tasks;
 
 namespace Pulse.Core.Common
 {
-    public class ScheduledJob
+    public class ScheduledTask
     {
         public string Name { get; set; }
 
-        public QueueJob QueueJob { get; set; } = new QueueJob();
+        public QueueJob Job { get; set; }
+
+        public Workflow Workflow { get; set; }
 
         public string Cron { get; set; }
 

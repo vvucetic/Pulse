@@ -40,7 +40,7 @@ namespace Pulse.Core.Server.Processes
             context.Wait(TimeSpan.FromMinutes(1));
         }
 
-        private ScheduledJob CalculateNextInvocation(ScheduledJob job)
+        private ScheduledTask CalculateNextInvocation(ScheduledTask job)
         {
             var schedule = CrontabSchedule.Parse(job.Cron);
             job.NextInvocation = schedule.GetNextOccurrence(DateTime.UtcNow);

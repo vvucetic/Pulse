@@ -60,9 +60,10 @@ namespace Pulse.Core.Storage
         public abstract void RemoveServer(string serverId);
         public abstract void RegisterWorker(string workerId, string serverId);
         public abstract int RemoveTimedOutServers(TimeSpan timeout);
-        public abstract bool EnqueueNextScheduledItem(Func<ScheduledJob, ScheduledJob> caluculateNext);
-        public abstract int CreateOrUpdateRecurringJob(ScheduledJob job);
-        public abstract void FinishJobAndEnqueueNext(int jobId);
+        public abstract bool EnqueueNextScheduledItem(Func<ScheduledTask, ScheduledTask> caluculateNext);
+        public abstract int CreateOrUpdateRecurringTask(ScheduledTask job);
+        public abstract void FinishJobConditionAndEnqueueNext(int jobId);
+        public abstract void MarkConsequentlyFailedJobs(int jobId);
         public virtual void WriteOptionsToLog(ILog logger)
         {
 

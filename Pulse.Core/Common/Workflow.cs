@@ -16,15 +16,15 @@ namespace Pulse.Core.Common
 
         public Guid WorkflowId { get; } = Guid.NewGuid();
 
-        private readonly WorkflowJob _rootWorkflowJob;
+        public readonly WorkflowJob RootWorkflowJob;
 
-        private readonly WorkflowJobGroup _rootWorkflowJobGroup;
+        public readonly WorkflowJobGroup RootWorkflowJobGroup;
 
 
         public Workflow(WorkflowJob workflowJob, Guid? contextId = null)
         {
             this.ContextId = contextId;
-            this._rootWorkflowJob = workflowJob;
+            this.RootWorkflowJob = workflowJob;
 
             GetAllJobs().ForEach(t =>
             {
@@ -36,7 +36,7 @@ namespace Pulse.Core.Common
         public Workflow(WorkflowJobGroup wfGroup, Guid? contextId = null)
         {
             this.ContextId = contextId;
-            this._rootWorkflowJobGroup = wfGroup;
+            this.RootWorkflowJobGroup = wfGroup;
 
             GetAllJobs().ForEach(t => 
             {
@@ -45,15 +45,37 @@ namespace Pulse.Core.Common
             });            
         }
 
+        [JsonConstructor]
+        public Workflow(WorkflowJob rootWorkflowJob, WorkflowJobGroup rootWorkflowJobGroup)
+        {
+            if(rootWorkflowJob!=null)
+            {
+                this.RootWorkflowJob = rootWorkflowJob;
+            }
+            else if(rootWorkflowJobGroup!=null)
+            {
+                this.RootWorkflowJobGroup = rootWorkflowJobGroup;
+            }
+            else
+            {
+                throw new Exception("Root Workflow job or Workflow group not set!");
+            }
+            GetAllJobs().ForEach(t =>
+            {
+                t.QueueJob.ContextId = this.ContextId;
+                t.QueueJob.WorkflowId = this.WorkflowId;
+            });
+        }
+
         public List<WorkflowJob> GetRootJobs()
         {
-            if (this._rootWorkflowJob != null)
+            if (this.RootWorkflowJob != null)
             {
-                return new List<WorkflowJob>() { this._rootWorkflowJob };
+                return new List<WorkflowJob>() { this.RootWorkflowJob };
             }
-            else if (this._rootWorkflowJobGroup != null)
+            else if (this.RootWorkflowJobGroup != null)
             {
-                return this._rootWorkflowJobGroup.Jobs;
+                return this.RootWorkflowJobGroup.Jobs;
             }
             else
             {
@@ -63,16 +85,16 @@ namespace Pulse.Core.Common
 
         public List<WorkflowJob> GetAllJobs()
         {
-            if (this._rootWorkflowJob != null)
+            if (this.RootWorkflowJob != null)
             {
                 var enumeratedIds = new HashSet<Guid>();
-                return GetJobsRecursively(this._rootWorkflowJob, enumeratedIds).ToList();
+                return GetJobsRecursively(this.RootWorkflowJob, enumeratedIds).ToList();
             }
-            else if (this._rootWorkflowJobGroup!=null)
+            else if (this.RootWorkflowJobGroup!=null)
             {
                 var list = new List<WorkflowJob>();
                 var enumeratedIds = new HashSet<Guid>();
-                this._rootWorkflowJobGroup.Jobs.ForEach(t => list.AddRange( GetJobsRecursively(t, enumeratedIds)));
+                this.RootWorkflowJobGroup.Jobs.ForEach(t => list.AddRange( GetJobsRecursively(t, enumeratedIds)));
                 return list;
             }
             else
@@ -101,17 +123,17 @@ namespace Pulse.Core.Common
 
         public void SaveWorkflow(Func<WorkflowJob, int> saveJob)
         {
-            if(this._rootWorkflowJob != null)
+            if(this.RootWorkflowJob != null)
             {
                 var savedIds = new Dictionary<Guid, int>();
-                SaveRecursiely(this._rootWorkflowJob, saveJob, savedIds);
-                var jobId = saveJob(this._rootWorkflowJob);
-                this._rootWorkflowJob.QueueJob.JobId = jobId;
+                SaveRecursiely(this.RootWorkflowJob, saveJob, savedIds);
+                var jobId = saveJob(this.RootWorkflowJob);
+                this.RootWorkflowJob.QueueJob.JobId = jobId;
             }
-            else if(this._rootWorkflowJobGroup != null)
+            else if(this.RootWorkflowJobGroup != null)
             {
                 var savedIds = new Dictionary<Guid, int>();
-                foreach (var job in this._rootWorkflowJobGroup.Jobs)
+                foreach (var job in this.RootWorkflowJobGroup.Jobs)
                 {
                     SaveRecursiely(job, saveJob, savedIds);
                     var jobId = saveJob(job);

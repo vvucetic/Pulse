@@ -289,7 +289,7 @@ namespace Pulse.SqlStorage
             }
         }
 
-        public override bool EnqueueNextScheduledItem(Func<ScheduledJob, ScheduledJob> caluculateNext )
+        public override bool EnqueueNextScheduledItem(Func<ScheduledTask, ScheduledTask> caluculateNext )
         {
             using (var db = GetDatabase())
             {
@@ -300,23 +300,46 @@ namespace Pulse.SqlStorage
                     {
                         return false;
                     }
-                    
-                    if(!string.IsNullOrEmpty(scheduleEntity.JobInvocationData))
-                    {
-                        var scheduledJob = ScheduleEntity.ToScheduleJob(scheduleEntity);
 
-                        scheduledJob = caluculateNext(scheduledJob);
-                        scheduleEntity.LastInvocation = scheduledJob.LastInvocation;
-                        scheduleEntity.NextInvocation = scheduledJob.NextInvocation;
+                    //if job scheduled
+                    if (!string.IsNullOrEmpty(scheduleEntity.JobInvocationData))
+                    {
+                        var scheduledTask = ScheduleEntity.ToScheduleTask(scheduleEntity);
+
+                        scheduledTask = caluculateNext(scheduledTask);
+                        scheduleEntity.LastInvocation = scheduledTask.LastInvocation;
+                        scheduleEntity.NextInvocation = scheduledTask.NextInvocation;
                         this._queryService.UpdateScheduledItem(scheduleEntity, t => new { t.LastInvocation, t.NextInvocation }, db);
-                        var insertedJob = JobEntity.FromScheduleEntity(scheduledJob);                        
+                        var insertedJob = JobEntity.FromScheduleEntity(scheduledTask);
                         var jobId = this._queryService.InsertJob(insertedJob, db);
                         var stateId = this._queryService.InsertJobState(
-                            StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = scheduledJob.QueueJob.QueueName, Reason = "Job enqueued by Recurring Scheduler" },
+                            StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = scheduledTask.Job.QueueName, Reason = "Job enqueued by Recurring Scheduler" },
                             insertedJob.Id),
                             db);
                         this._queryService.SetJobState(jobId, stateId, EnqueuedState.DefaultName, db);
-                        this._queryService.InsertJobToQueue(jobId, scheduledJob.QueueJob.QueueName, db);
+                        this._queryService.InsertJobToQueue(jobId, scheduledTask.Job.QueueName, db);
+                        tran.Complete();
+                        return true;
+                    }
+                    //if workflow scheduled
+                    else if (!string.IsNullOrEmpty(scheduleEntity.WorkflowInvocationData))
+                    {
+                        var scheduledTask = ScheduleEntity.ToScheduleTask(scheduleEntity);
+                        scheduledTask = caluculateNext(scheduledTask);
+                        scheduleEntity.LastInvocation = scheduledTask.LastInvocation;
+                        scheduleEntity.NextInvocation = scheduledTask.NextInvocation;
+                        this._queryService.UpdateScheduledItem(scheduleEntity, t => new { t.LastInvocation, t.NextInvocation }, db);
+
+                        var rootJobs = scheduledTask.Workflow.GetRootJobs().ToDictionary(t => t.TempId, null);
+                        scheduledTask.Workflow.SaveWorkflow((workflowJob) => {
+                            return CreateAndEnqueueJob(
+                                queueJob: workflowJob.QueueJob,
+                                state: rootJobs.ContainsKey(workflowJob.TempId) ?
+                                    new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = "Automatically enqueued by Recurring Scheduler as part of workflow because not parent jobs to wait for." } as IState
+                                    : new AwaitingState() { Reason = "Waiting for other job/s to finish.", CreatedAt = DateTime.UtcNow } as IState,
+                                db: db
+                                );
+                        });
                         tran.Complete();
                         return true;
                     }
@@ -329,7 +352,7 @@ namespace Pulse.SqlStorage
         }
 
 
-        public override int CreateOrUpdateRecurringJob(ScheduledJob job)
+        public override int CreateOrUpdateRecurringTask(ScheduledTask job)
         {
             using (var db = GetDatabase())
             {
@@ -342,7 +365,7 @@ namespace Pulse.SqlStorage
             }
         }
 
-        public override void FinishJobAndEnqueueNext(int jobId)
+        public override void FinishJobConditionAndEnqueueNext(int jobId)
         {
             using (var db = GetDatabase())
             {
@@ -357,6 +380,24 @@ namespace Pulse.SqlStorage
                                                     db);
                         this._queryService.SetJobState(job.Id, stateId, EnqueuedState.DefaultName, db);
                         this._queryService.InsertJobToQueue(job.Id, job.Queue, db);
+                    }
+                    tran.Complete();
+                }
+            }
+        }
+
+        public override void MarkConsequentlyFailedJobs(int jobId)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    var dependentJobs = this._queryService.GetDependentWorkflowTree(jobId, db);
+                    var state = new ConsequentlyFailed("Job marked as failed because one of jobs this job depends on has failed.", jobId);
+                    foreach (var job in dependentJobs)
+                    {
+                        var stateId = this._queryService.InsertJobState(StateEntity.FromIState(state, job.Id), db);
+                        this._queryService.SetJobState(job.Id, stateId, state.Name, db);
                     }
                     tran.Complete();
                 }

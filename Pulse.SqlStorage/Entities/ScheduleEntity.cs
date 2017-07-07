@@ -25,29 +25,51 @@ namespace Pulse.SqlStorage.Entities
 
         public string WorkflowInvocationData { get; set; }
 
-        public static ScheduledJob ToScheduleJob(ScheduleEntity scheduleEntity)
+        public static ScheduledTask ToScheduleTask(ScheduleEntity scheduleEntity)
         {
-            var jobInvocationData = JobHelper.FromJson<ScheduledJobInvocationData>(scheduleEntity.JobInvocationData);
-
-            var scheduledJob = new ScheduledJob()
+            if (!string.IsNullOrEmpty(scheduleEntity.JobInvocationData))
             {
-                Cron = scheduleEntity.Cron,
-                Name = scheduleEntity.Name,
-                QueueJob = new QueueJob()
-                {
-                    Job = jobInvocationData.Job,
-                    ContextId = jobInvocationData.ContextId,
-                    MaxRetries = jobInvocationData.MaxRetries,
-                    QueueName = jobInvocationData.Queue,
-                    CreatedAt = DateTime.UtcNow,
-                    NextJobs = new List<int>(),
-                    RetryCount = 1
-                },
-                LastInvocation = scheduleEntity.LastInvocation,
-                NextInvocation = scheduleEntity.NextInvocation
-            };
+                var jobInvocationData = JobHelper.FromJson<ScheduledJobInvocationData>(scheduleEntity.JobInvocationData);
 
-            return scheduledJob;
+                var scheduledJob = new ScheduledTask()
+                {
+                    Cron = scheduleEntity.Cron,
+                    Name = scheduleEntity.Name,
+                    Job = new QueueJob()
+                    {
+                        Job = jobInvocationData.Job,
+                        ContextId = jobInvocationData.ContextId,
+                        MaxRetries = jobInvocationData.MaxRetries,
+                        QueueName = jobInvocationData.Queue,
+                        CreatedAt = DateTime.UtcNow,
+                        NextJobs = new List<int>(),
+                        RetryCount = 1
+                    },
+                    LastInvocation = scheduleEntity.LastInvocation,
+                    NextInvocation = scheduleEntity.NextInvocation
+                };
+
+                return scheduledJob;
+            }
+            else if(!string.IsNullOrEmpty(scheduleEntity.WorkflowInvocationData))
+            {
+                var workflow = JobHelper.FromJson<Workflow>(scheduleEntity.WorkflowInvocationData);
+
+                var scheduledJob = new ScheduledTask()
+                {
+                    Cron = scheduleEntity.Cron,
+                    Name = scheduleEntity.Name,
+                    Workflow = workflow,
+                    LastInvocation = scheduleEntity.LastInvocation,
+                    NextInvocation = scheduleEntity.NextInvocation
+                };
+
+                return scheduledJob;
+            }
+            else
+            {
+                throw new Exception("Scheduled task does not contain job invocation data or workflow invocation data");
+            }
         }
     }
 }

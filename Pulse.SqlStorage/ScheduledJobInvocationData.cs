@@ -22,6 +22,8 @@ namespace Pulse.SqlStorage
 
         public static ScheduledJobInvocationData FromQueueJob(QueueJob queueJob)
         {
+            if (queueJob == null)
+                return null;
             return new ScheduledJobInvocationData()
             {
                 ContextId = queueJob.ContextId,
@@ -31,9 +33,9 @@ namespace Pulse.SqlStorage
             };
         }
 
-        public static ScheduledJobInvocationData FromScheduledJob(ScheduledJob job)
+        public static ScheduledJobInvocationData FromScheduledJob(ScheduledTask job)
         {
-            return FromQueueJob(job.QueueJob);
+            return FromQueueJob(job.Job);
         }
     }
 }

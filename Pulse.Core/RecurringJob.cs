@@ -11,8 +11,8 @@ namespace Pulse.Core
 {
     public static class RecurringJob
     {
-        private static readonly Lazy<RecurringJobManager> Instance = new Lazy<RecurringJobManager>(
-                    () => new RecurringJobManager());
+        private static readonly Lazy<RecurringManager> Instance = new Lazy<RecurringManager>(
+                    () => new RecurringManager());
 
         public static void AddOrUpdate(
             Expression<Action> methodCall,

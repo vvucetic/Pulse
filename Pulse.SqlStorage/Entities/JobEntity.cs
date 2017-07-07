@@ -45,20 +45,20 @@ namespace Pulse.SqlStorage.Entities
 
         public Guid? WorkflowId { get; set; }
 
-        public static JobEntity FromScheduleEntity(ScheduledJob scheduledJob)
+        public static JobEntity FromScheduleEntity(ScheduledTask scheduledJob)
         {
             return new JobEntity
             {
-                ContextId = scheduledJob.QueueJob.ContextId,
-                CreatedAt = scheduledJob.QueueJob.CreatedAt,
-                ExpireAt = scheduledJob.QueueJob.ExpireAt,
-                Id = scheduledJob.QueueJob.JobId,
-                MaxRetries = scheduledJob.QueueJob.MaxRetries,
-                InvocationData = JobHelper.ToJson(Pulse.Core.Storage.InvocationData.Serialize(scheduledJob.QueueJob.Job)),
-                NextJobs = JobHelper.ToJson(scheduledJob.QueueJob.NextJobs),
+                ContextId = scheduledJob.Job.ContextId,
+                CreatedAt = scheduledJob.Job.CreatedAt,
+                ExpireAt = scheduledJob.Job.ExpireAt,
+                Id = scheduledJob.Job.JobId,
+                MaxRetries = scheduledJob.Job.MaxRetries,
+                InvocationData = JobHelper.ToJson(Pulse.Core.Storage.InvocationData.Serialize(scheduledJob.Job.Job)),
+                NextJobs = JobHelper.ToJson(scheduledJob.Job.NextJobs),
                 RetryCount = 1,
-                NextRetry = scheduledJob.QueueJob.NextRetry,
-                Queue = scheduledJob.QueueJob.QueueName
+                NextRetry = scheduledJob.Job.NextRetry,
+                Queue = scheduledJob.Job.QueueName
             };
         }
     }

@@ -7,13 +7,19 @@ using System.Threading.Tasks;
 
 namespace Pulse.Core
 {
-    public interface IRecurringJobManager
+    public interface IRecurringManager
     {
         void AddOrUpdate(
             string recurringJobId,
             Job job,
             string cronExpression,
             RecurringJobOptions options);
+
+        void AddOrUpdate(
+                string recurringJobId,
+                Workflow workflow,
+                string cronExpression
+            );
 
         void Trigger(string recurringJobId);
         void RemoveIfExists(string recurringJobId);
