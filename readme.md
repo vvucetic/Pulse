@@ -75,8 +75,12 @@ If failed, each job is retried configured number of times with exponential backo
 
 ## Parallelism
 
-By default, engine has 20 workers that pop from the queue in parallel manner. For greather scale, server can be run on multiple machines.
+By default, engine has 20 workers that pop from the queue in parallel manner. For greater scale, server can be run on multiple machines.
 
 ## Heartbeat and watchdog
 
-Each server registers his worker ids and heartbeats every minute. If server hasn't heartbeated for more than 5 minutes, engine will automatically remove server from server list and all jobs registered to be running on workers of that server will automatically enqueue for another run. This way, engine ensures at least once delivery (with possible delay of timeout).
+Each server registers his worker ids on startup and heartbeats every minute. If server hasn't heartbeated for more than 5 minutes, engine will automatically remove server from server list and all jobs registered to be running on workers of that server will be automatically enqueued for another run. This way, engine ensures at least once delivery (with possible delay of timeout).
+
+## Queues
+
+Engine supports multiple queues. Each server can watch for multiple queues or one. This can be helpful when executing tasks on specific servers is required or when queue prioritization is needed. By default, all jobs go to "default" queue and all servers monitor "default" queue.
