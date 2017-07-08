@@ -1,7 +1,7 @@
-#Pulse
+# Pulse
 Background job engine
 
-##Client
+## Client
 
 Enqueue job just like executing any other method. Method will be serialized with passed parameters and executed on worker in server.
 
@@ -43,4 +43,13 @@ RecurringWorkflow.AddOrUpdate("test workflow", wf, Cron.MinuteInterval(1));
 
 Execution will like this:
 
+![Workflow diagram](https://raw.githubusercontent.com/vvucetic/Pulse/master/Assets/workflow.png)
 
+## Server
+
+Server can be run in other process, windows service, console application or ASP.NET application.
+
+```C#
+GlobalConfiguration.Configuration.UseSqlServerStorage("db");
+var server = new BackgroundJobServer();
+```
