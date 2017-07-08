@@ -118,9 +118,9 @@ namespace Pulse.Core.Tests
         public void CreateWorkflow2()
         {
             var dl = WorkflowJob.MakeJob(() => WorkflowMethod("Download"));
-            var co1 = WorkflowJob.MakeJob(() => FailingWorkflowMethod("Create object 1"), maxRetries: 1);
-            var co2 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 2"));
-            var co3 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 3"));
+            var co1 = WorkflowJob.MakeJob(() => FailingWorkflowMethod("Do something 1"), maxRetries: 1);
+            var co2 = WorkflowJob.MakeJob(() => WorkflowMethod("Do something 2"));
+            var co3 = WorkflowJob.MakeJob(() => WorkflowMethod("Do something 3"));
             var se1 = WorkflowJob.MakeJob(() => WorkflowMethod("Send email 1"));
             var se3 = WorkflowJob.MakeJob(() => WorkflowMethod("Send email 3"));
             var de = WorkflowJob.MakeJob(() => WorkflowMethod("Delete email"));
@@ -142,9 +142,9 @@ namespace Pulse.Core.Tests
         public void CreateRecurringWorkflow()
         {
             var dl = WorkflowJob.MakeJob(() => WorkflowMethod("Download"));
-            var co1 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 1"), maxRetries: 1);
-            var co2 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 2"));
-            var co3 = WorkflowJob.MakeJob(() => WorkflowMethod("Create object 3"));
+            var co1 = WorkflowJob.MakeJob(() => WorkflowMethod("Do something 1"));
+            var co2 = WorkflowJob.MakeJob(() => WorkflowMethod("Do something 2"));
+            var co3 = WorkflowJob.MakeJob(() => WorkflowMethod("Do something 3"));
             var se1 = WorkflowJob.MakeJob(() => WorkflowMethod("Send email 1"));
             var se3 = WorkflowJob.MakeJob(() => WorkflowMethod("Send email 3"));
             var de = WorkflowJob.MakeJob(() => WorkflowMethod("Delete email"));
