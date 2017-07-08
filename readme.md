@@ -19,7 +19,7 @@ public void Method(int i, DateTime date)
 }
 ```
 
-Besides that, it's possible to enqueue complex workflow of tasks like this:
+Besides that, it's possible to enqueue complex workflow of jobs like this:
 
 ```C#
 var dl = WorkflowJob.MakeJob(() => WorkflowMethod("Download"));
@@ -38,12 +38,27 @@ dl.ContinueWithGroup(group);
 
 var wf = new Workflow(dl);
 GlobalConfiguration.Configuration.UseSqlServerStorage("db");
-RecurringWorkflow.AddOrUpdate("test workflow", wf, Cron.MinuteInterval(1));
+var client = new BackgroundJobClient();
+client.CreateAndEnqueue(wf);
 ```
 
 Execution will like this:
 
 ![Workflow diagram](https://raw.githubusercontent.com/vvucetic/Pulse/master/Assets/workflow.png)
+
+### Recurring
+
+Engine support recurring task for both jobs and workflows.
+
+For jobs:
+```C#
+RecurringJob.AddOrUpdate(() => RecurringMethod("Recurring task", 1), Cron.MinuteInterval(2));
+```
+
+or for workflows:
+```C#
+RecurringWorkflow.AddOrUpdate("test workflow", wf, Cron.MinuteInterval(1));
+```
 
 ## Server
 
