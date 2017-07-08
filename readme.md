@@ -1,5 +1,5 @@
 # Pulse
-Background job engine
+Pulse is background job engine for executing jobs in background in reliable way, resistant to host (application or machine) restarts or power loss because its baked by persistend storage. It is inspired and unofficially forked from Hangfire (Hangfire is production ready, unlike Pulse).
 
 ## Client
 
@@ -48,7 +48,7 @@ Execution will like this:
 
 ### Recurring
 
-Engine support recurring task for both jobs and workflows.
+Engine support recurring task for both jobs and workflows. Recurring jobs will be enqueued at the planned time. Cron sintax is supported.
 
 For jobs:
 ```C#
@@ -68,3 +68,15 @@ Server can be run in other process, windows service, console application or ASP.
 GlobalConfiguration.Configuration.UseSqlServerStorage("db");
 var server = new BackgroundJobServer();
 ```
+
+## Retry policy
+
+If failed, each job is retried configured number of times with exponential backoff. After failure, job is delayed and requeued on scheduled time by engine background process. Each job can be configured to custom number of retries. 
+
+## Parallelism
+
+By default, engine has 20 workers that pop from the queue in parallel manner. For greather scale, server can be run on multiple machines.
+
+## Heartbeat and watchdog
+
+Each server registers his worker ids and heartbeats every minute. If server hasn't heartbeated for more than 5 minutes, engine will automatically remove server from server list and all jobs registered to be running on workers of that server will automatically enqueue for another run. This way, engine ensures at least once delivery (with possible delay of timeout).
