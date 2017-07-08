@@ -73,14 +73,47 @@ var server = new BackgroundJobServer();
 
 If failed, each job is retried configured number of times with exponential backoff. After failure, job is delayed and requeued on scheduled time by engine background process. Each job can be configured to custom number of retries. 
 
+```C#
+client.Enqueue(() => Method(1, DateTime.UtcNow), maxRetries: 1);
+```
+for each workflow job as well
+```C#
+WorkflowJob.MakeJob(() => FailingWorkflowMethod("Do something 1"), maxRetries: 1);
+```
+
 ## Parallelism
 
 By default, engine has 20 workers that pop from the queue in parallel manner. For greater scale, server can be run on multiple machines.
 
 ## Heartbeat and watchdog
 
-Each server registers his worker ids on startup and heartbeats every minute. If server hasn't heartbeated for more than 5 minutes, engine will automatically remove server from server list and all jobs registered to be running on workers of that server will be automatically enqueued for another run. This way, engine ensures at least once delivery (with possible delay of timeout).
+Each server registers his worker ids on startup and heartbeats every minute. If server hasn't heartbeated for more than 5 minutes, engine will automatically remove server from server list and all jobs registered to be running on workers of that server will be automatically enqueued for another run. This way, engine ensures at least once delivery (with possible delay of server heartbeat timeout).
 
 ## Queues
 
 Engine supports multiple queues. Each server can watch for multiple queues or one. This can be helpful when executing tasks on specific servers is required or when queue prioritization is needed. By default, all jobs go to "default" queue and all servers monitor "default" queue.
+
+Queue can be set on enqueue message
+
+```C#
+client.Enqueue(() => Method(1, DateTime.UtcNow), queue: "priority-1");
+```
+or recurring job
+
+```C#
+RecurringJob.AddOrUpdate(() => RecurringMethod("Recurring task", 1), Cron.MinuteInterval(2), queue: "priority-1");
+```
+
+and for each workflow job individually
+```C#
+WorkflowJob.MakeJob(() => WorkflowMethod("1 task"), queue: "priority-1")
+```
+
+and for each server can be configured what queues is monitoring
+```C#
+GlobalConfiguration.Configuration.UseSqlServerStorage("db");
+var server = new BackgroundJobServer(new BackgroundJobServerOptions()
+{
+    Queues = new [] {"default", "priority-1"}
+});
+```

@@ -10,32 +10,32 @@ namespace Pulse.Core
 {
     public static class BackgroundJobClientExtensions
     {
-        public static int Enqueue(this IBackgroundJobClient client, Expression<Action> methodCall, string queue = "default")
+        public static int Enqueue(this IBackgroundJobClient client, Expression<Action> methodCall, string queue = "default", int maxRetries = 10)
         {
             if (client == null) throw new ArgumentNullException(nameof(client));
 
-            return client.CreateAndEnqueue(Job.FromExpression(methodCall), queue);
+            return client.CreateAndEnqueue(Job.FromExpression(methodCall), queue, maxRetries);
         }
 
-        public static int Enqueue(this IBackgroundJobClient client, Expression<Func<Task>> methodCall, string queue = "default")
+        public static int Enqueue(this IBackgroundJobClient client, Expression<Func<Task>> methodCall, string queue = "default", int maxRetries = 10)
         {
             if (client == null) throw new ArgumentNullException(nameof(client));
 
-            return client.CreateAndEnqueue(Job.FromExpression(methodCall), queue);
+            return client.CreateAndEnqueue(Job.FromExpression(methodCall), queue, maxRetries);
         }
 
-        public static int Enqueue<T>(this IBackgroundJobClient client, Expression<Action<T>> methodCall, string queue = "default")
+        public static int Enqueue<T>(this IBackgroundJobClient client, Expression<Action<T>> methodCall, string queue = "default", int maxRetries = 10)
         {
             if (client == null) throw new ArgumentNullException(nameof(client));
 
-            return client.CreateAndEnqueue(Job.FromExpression(methodCall), queue);
+            return client.CreateAndEnqueue(Job.FromExpression(methodCall), queue, maxRetries);
         }
         
-        public static int Enqueue<T>(this IBackgroundJobClient client, Expression<Func<T, Task>> methodCall, string queue = "default")
+        public static int Enqueue<T>(this IBackgroundJobClient client, Expression<Func<T, Task>> methodCall, string queue = "default", int maxRetries = 10)
         {
             if (client == null) throw new ArgumentNullException(nameof(client));
 
-            return client.CreateAndEnqueue(Job.FromExpression(methodCall), queue);
+            return client.CreateAndEnqueue(Job.FromExpression(methodCall), queue, maxRetries);
         }
     }
 }

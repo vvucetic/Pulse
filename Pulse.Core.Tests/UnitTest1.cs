@@ -34,7 +34,10 @@ namespace Pulse.Core.Tests
         public void TestServer()
         {
             GlobalConfiguration.Configuration.UseSqlServerStorage("db");
-            var server = new BackgroundJobServer();
+            var server = new BackgroundJobServer(new BackgroundJobServerOptions()
+            {
+                Queues = new [] {"default"}
+            });
             Thread.Sleep(TimeSpan.FromDays(1));
         }
 
@@ -51,7 +54,7 @@ namespace Pulse.Core.Tests
         {
             GlobalConfiguration.Configuration.UseSqlServerStorage("db");
 
-            RecurringJob.AddOrUpdate(() => RecurringMethod("Recurring task", 1), Cron.MinuteInterval(2));
+            RecurringJob.AddOrUpdate(() => RecurringMethod("Recurring task", 1), Cron.MinuteInterval(2), queue: "priority-1");
         }
 
         public void RecurringMethod(string message, int id)

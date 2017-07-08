@@ -22,6 +22,11 @@ namespace Pulse.Core.Server
 
         }
 
+        public BackgroundJobServer(BackgroundJobServerOptions options) : this(options, DataStorage.Current, new List<IBackgroundProcess>())
+        {
+
+        }
+
         public BackgroundJobServer(BackgroundJobServerOptions options, DataStorage storage, IEnumerable<IBackgroundProcess> additionalProcesses)
         {
             if (additionalProcesses == null) throw new ArgumentNullException(nameof(additionalProcesses));
