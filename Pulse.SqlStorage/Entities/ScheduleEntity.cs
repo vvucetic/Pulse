@@ -25,6 +25,8 @@ namespace Pulse.SqlStorage.Entities
 
         public string WorkflowInvocationData { get; set; }
 
+        public bool OnlyIfLastFinishedOrFailed { get; set; }
+
         public static ScheduledTask ToScheduleTask(ScheduleEntity scheduleEntity)
         {
             if (!string.IsNullOrEmpty(scheduleEntity.JobInvocationData))
@@ -46,7 +48,8 @@ namespace Pulse.SqlStorage.Entities
                         RetryCount = 1
                     },
                     LastInvocation = scheduleEntity.LastInvocation,
-                    NextInvocation = scheduleEntity.NextInvocation
+                    NextInvocation = scheduleEntity.NextInvocation,
+                    OnlyIfLastFinishedOrFailed=scheduleEntity.OnlyIfLastFinishedOrFailed
                 };
 
                 return scheduledJob;
@@ -61,7 +64,8 @@ namespace Pulse.SqlStorage.Entities
                     Name = scheduleEntity.Name,
                     Workflow = workflow,
                     LastInvocation = scheduleEntity.LastInvocation,
-                    NextInvocation = scheduleEntity.NextInvocation
+                    NextInvocation = scheduleEntity.NextInvocation,
+                    OnlyIfLastFinishedOrFailed = scheduleEntity.OnlyIfLastFinishedOrFailed
                 };
 
                 return scheduledJob;

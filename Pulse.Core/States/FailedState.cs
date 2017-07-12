@@ -18,7 +18,8 @@ namespace Pulse.Core.States
         
         public Exception Exception { get; }
 
-        public string Name => "Failed";
+        public static string DefaultName = "Failed";
+        public string Name => FailedState.DefaultName;
 
         public string Reason { get; set; }
 

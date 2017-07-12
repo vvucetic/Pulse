@@ -16,7 +16,8 @@ namespace Pulse.Core.States
             this.FailedParentId = failedParentId;
         }
 
-        public string Name => "ConsequentlyFailed";
+        public static string DefaultName = "ConsequentlyFailed";
+        public string Name => ConsequentlyFailed.DefaultName;
 
         public string Reason { get; set; }
 

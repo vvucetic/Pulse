@@ -132,8 +132,9 @@ when not matched then insert(Id, Data, LastHeartbeat) values(Source.Id, Source.D
 set s.LastInvocation = GETUTCDATE()
 output INSERTED.*
 from Schedule s
-WHERE s.NextInvocation < GETUTCDATE()";
-            return db.Query<ScheduleEntity>(sql).FirstOrDefault();
+WHERE s.NextInvocation < GETUTCDATE() AND (s.OnlyIfLastFinishedOrFailed=0 OR NOT EXISTS(SELECT Id FROM [dbo].[Job] j WHERE j.ScheduleName = s.Name AND j.State IN (@states)))
+";
+            return db.Query<ScheduleEntity>(sql, new { states = new string[] { ProcessingState.DefaultName, ScheduledState.DefaultName, AwaitingState.DefaultName, EnqueuedState.DefaultName } }).FirstOrDefault();
         }
 
         public int UpdateScheduledItem(ScheduleEntity scheduleEntity, Expression<Func<ScheduleEntity, object>> fields, Database db)
@@ -145,12 +146,12 @@ WHERE s.NextInvocation < GETUTCDATE()";
         {
             var sql =
 $@"; merge Schedule as Target
-using (VALUES(@name, @cron, @lastInvocation, @nextInvocation, @jobInvocationData, @workflowInvocationData)) as Source (Name, Cron, LastInvocation, NextInvocation, JobInvocationData, WorkflowInvocationData)
+using (VALUES(@name, @cron, @lastInvocation, @nextInvocation, @jobInvocationData, @workflowInvocationData, @onlyIfLastFinishedOrFailed)) as Source (Name, Cron, LastInvocation, NextInvocation, JobInvocationData, WorkflowInvocationData, OnlyIfLastFinishedOrFailed)
 on Target.Name = Source.Name
-when matched then update set Cron = Source.Cron, LastInvocation = Source.LastInvocation, NextInvocation = Source.NextInvocation, JobInvocationData = Source.JobInvocationData, WorkflowInvocationData = Source.WorkflowInvocationData
-when not matched then insert(Name, Cron, LastInvocation, NextInvocation, JobInvocationData, WorkflowInvocationData) values(Source.Name,Source.Cron,Source.LastInvocation,Source.NextInvocation,Source.JobInvocationData,Source.WorkflowInvocationData);
+when matched then update set Cron = Source.Cron, LastInvocation = Source.LastInvocation, NextInvocation = Source.NextInvocation, JobInvocationData = Source.JobInvocationData, WorkflowInvocationData = Source.WorkflowInvocationData, OnlyIfLastFinishedOrFailed = Source.OnlyIfLastFinishedOrFailed
+when not matched then insert(Name, Cron, LastInvocation, NextInvocation, JobInvocationData, WorkflowInvocationData, OnlyIfLastFinishedOrFailed) values(Source.Name,Source.Cron,Source.LastInvocation,Source.NextInvocation,Source.JobInvocationData,Source.WorkflowInvocationData, Source.OnlyIfLastFinishedOrFailed);
 ";
-            return db.Execute(sql, new { name = scheduledTask.Name, cron = scheduledTask.Cron, lastInvocation = scheduledTask.LastInvocation, nextInvocation = scheduledTask.NextInvocation, jobInvocationData = JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(scheduledTask)), workflowInvocationData = JobHelper.ToJson(scheduledTask.Workflow) });
+            return db.Execute(sql, new { name = scheduledTask.Name, cron = scheduledTask.Cron, lastInvocation = scheduledTask.LastInvocation, nextInvocation = scheduledTask.NextInvocation, jobInvocationData = JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(scheduledTask)), workflowInvocationData = JobHelper.ToJson(scheduledTask.Workflow), onlyIfLastFinishedOrFailed = scheduledTask.OnlyIfLastFinishedOrFailed });
         }
 
         public void InsertJobCondition(JobConditionEntity jobCondition, Database db)

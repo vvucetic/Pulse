@@ -18,7 +18,8 @@ namespace Pulse.Core
         void AddOrUpdate(
                 string recurringJobId,
                 Workflow workflow,
-                string cronExpression
+                string cronExpression,
+                bool onlyIfLastFinishedOrFailed
             );
 
         void Trigger(string recurringJobId);

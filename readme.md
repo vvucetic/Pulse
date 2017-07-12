@@ -13,9 +13,7 @@ client.Enqueue(() => Method(1, DateTime.UtcNow));
 public void Method(int i, DateTime date)
 {
     Thread.Sleep(5000);
-    Debug.WriteLine("Wooorks!");
-    Debug.WriteLine("Nooo!");
-    throw new Exception("Custom exception");
+    Debug.WriteLine("Works!");
 }
 ```
 

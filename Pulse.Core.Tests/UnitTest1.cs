@@ -43,10 +43,7 @@ namespace Pulse.Core.Tests
 
         public void Method(int i, DateTime date)
         {
-            Thread.Sleep(5000);
-            Debug.WriteLine("Wooorks!");
-            Debug.WriteLine("Nooo!");
-            throw new Exception("Custom exception");
+            Thread.Sleep(65000);
         }
 
         [TestMethod]
@@ -54,11 +51,12 @@ namespace Pulse.Core.Tests
         {
             GlobalConfiguration.Configuration.UseSqlServerStorage("db");
 
-            RecurringJob.AddOrUpdate(() => RecurringMethod("Recurring task", 1), Cron.MinuteInterval(2), queue: "priority-1");
+            RecurringJob.AddOrUpdate(() => RecurringMethod("Recurring task", 1), Cron.MinuteInterval(1), onlyIfLastFinishedOrFailed: true);
         }
 
         public void RecurringMethod(string message, int id)
         {
+            Thread.Sleep(65000);
             Debug.WriteLine($"Recurring task - {message}!");
         }
 

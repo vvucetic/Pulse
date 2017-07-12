@@ -369,13 +369,13 @@ namespace Pulse.SqlStorage
             }
         }
 
-        public override void FinishJobConditionAndEnqueueNext(int jobId)
+        public override void TriggerNextJobs(int finishedJobId)
         {
             using (var db = GetDatabase())
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    var nextJobs = this._queryService.MarkAsFinishedAndGetNextJobs(jobId, db);
+                    var nextJobs = this._queryService.MarkAsFinishedAndGetNextJobs(finishedJobId, db);
                     foreach (var job in nextJobs)
                     {
                         var stateId = this._queryService.InsertJobState(
@@ -390,14 +390,14 @@ namespace Pulse.SqlStorage
             }
         }
 
-        public override void MarkConsequentlyFailedJobs(int jobId)
+        public override void MarkConsequentlyFailedJobs(int failedJobId)
         {
             using (var db = GetDatabase())
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    var dependentJobs = this._queryService.GetDependentWorkflowTree(jobId, db);
-                    var state = new ConsequentlyFailed("Job marked as failed because one of jobs this job depends on has failed.", jobId);
+                    var dependentJobs = this._queryService.GetDependentWorkflowTree(failedJobId, db);
+                    var state = new ConsequentlyFailed("Job marked as failed because one of jobs this job depends on has failed.", failedJobId);
                     foreach (var job in dependentJobs)
                     {
                         var stateId = this._queryService.InsertJobState(StateEntity.FromIState(state, job.Id), db);

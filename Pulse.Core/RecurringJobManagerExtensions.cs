@@ -14,19 +14,10 @@ namespace Pulse.Core
             this IRecurringManager manager,
             string recurringJobId,
             Job job,
-            string cronExpression)
-        {
-            AddOrUpdate(manager, recurringJobId, job, cronExpression, TimeZoneInfo.Utc);
-        }
-
-        public static void AddOrUpdate(
-            this IRecurringManager manager,
-            string recurringJobId,
-            Job job,
             string cronExpression,
-            TimeZoneInfo timeZone)
+            bool onlyIfLastFinishedOrFailed)
         {
-            AddOrUpdate(manager, recurringJobId, job, cronExpression, timeZone, EnqueuedState.DefaultQueue);
+            AddOrUpdate(manager, recurringJobId, job, cronExpression, TimeZoneInfo.Utc, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate(
@@ -35,7 +26,19 @@ namespace Pulse.Core
             Job job,
             string cronExpression,
             TimeZoneInfo timeZone,
-            string queue)
+            bool onlyIfLastFinishedOrFailed)
+        {
+            AddOrUpdate(manager, recurringJobId, job, cronExpression, timeZone, EnqueuedState.DefaultQueue, onlyIfLastFinishedOrFailed);
+        }
+
+        public static void AddOrUpdate(
+            this IRecurringManager manager,
+            string recurringJobId,
+            Job job,
+            string cronExpression,
+            TimeZoneInfo timeZone,
+            string queue,
+            bool onlyIfLastFinishedOrFailed)
         {
             if (manager == null) throw new ArgumentNullException(nameof(manager));
             if (timeZone == null) throw new ArgumentNullException(nameof(timeZone));
@@ -45,7 +48,7 @@ namespace Pulse.Core
                 recurringJobId,
                 job,
                 cronExpression,
-                new RecurringJobOptions { QueueName = queue, TimeZone = timeZone });
+                new RecurringJobOptions { QueueName = queue, TimeZone = timeZone, OnlyIfLastFinishedOrFailed = onlyIfLastFinishedOrFailed });
         }
     }
 }

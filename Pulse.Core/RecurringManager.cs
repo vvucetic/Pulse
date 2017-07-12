@@ -43,11 +43,12 @@ namespace Pulse.Core
                     QueueName = options.QueueName,
                     MaxRetries = options.MaxRetries,
                     ContextId = options.ContextId
-                }
+                },
+                OnlyIfLastFinishedOrFailed = options.OnlyIfLastFinishedOrFailed
             });
         }
 
-        public void AddOrUpdate(string recurringJobId, Workflow workflow, string cronExpression)
+        public void AddOrUpdate(string recurringJobId, Workflow workflow, string cronExpression, bool onlyIfLastFinishedOrFailed = false)
         {
             if (recurringJobId == null) throw new ArgumentNullException(nameof(recurringJobId));
             if (workflow == null) throw new ArgumentNullException(nameof(workflow));
@@ -60,7 +61,8 @@ namespace Pulse.Core
                 LastInvocation = DateTime.UtcNow,
                 Name = recurringJobId,
                 NextInvocation = CrontabSchedule.Parse(cronExpression).GetNextOccurrence(DateTime.UtcNow),
-                Workflow = workflow
+                Workflow = workflow,
+                OnlyIfLastFinishedOrFailed = onlyIfLastFinishedOrFailed
             });
         }
 

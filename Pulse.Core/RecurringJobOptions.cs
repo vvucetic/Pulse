@@ -39,5 +39,7 @@ namespace Pulse.Core
         public int MaxRetries { get; set; } = 10;
 
         public Guid? ContextId { get; set; }
+
+        public bool OnlyIfLastFinishedOrFailed { get; set; } = false;
     }
 }
