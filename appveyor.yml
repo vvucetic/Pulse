@@ -5,11 +5,9 @@ branches:
 image: Visual Studio 2017
 init:
 - ps: >-
-    $env:buildVersion = "$env:packageVersion.$env:appveyor_build_number"
+    $env:buildVersion = "$env:appveyor_build_version"
 
-    $env:nugetVersion = "$env:packageVersion-beta-$env:appveyor_build_number"
-
-    Update-AppveyorBuild -Version $env:buildVersion
+    $env:nugetVersion = "$env:appveyor_build_version-alpha"
 assembly_info:
   patch: true
   file: '**\AssemblyInfo.*'
@@ -23,13 +21,11 @@ build:
   project: Pulse.sln
   verbosity: normal
 after_build:
-- ps: nuget pack Pulse.Core.nuspec -version "$env:buildVersion"
+- ps: nuget pack nuspec\Pulse.Core.nuspec -version "$env:nugetVersion"
 test: off
 artifacts:
-- path: Pulse.Core
-  name: Pulse.Core
-- path: Pulse.SqlStorage
-  name: Pulse.SqlStorage
+- path: '*.nupkg'
+  name: NuGet packages
 deploy:
 - provider: NuGet
   api_key:
