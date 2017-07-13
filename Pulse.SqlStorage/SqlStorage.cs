@@ -302,59 +302,61 @@ namespace Pulse.SqlStorage
                     {
                         return false;
                     }
-
-                    //if job scheduled
-                    if (!string.IsNullOrEmpty(scheduleEntity.JobInvocationData))
-                    {
-                        var scheduledTask = ScheduleEntity.ToScheduleTask(scheduleEntity);
-
-                        scheduledTask = caluculateNext(scheduledTask);
-                        scheduleEntity.LastInvocation = scheduledTask.LastInvocation;
-                        scheduleEntity.NextInvocation = scheduledTask.NextInvocation;
-                        this._queryService.UpdateScheduledItem(scheduleEntity, t => new { t.LastInvocation, t.NextInvocation }, db);
-                        var insertedJob = JobEntity.FromScheduleEntity(scheduledTask);
-                        insertedJob.ScheduleName = scheduleEntity.Name;
-                        var jobId = this._queryService.InsertJob(insertedJob, db);
-                        var stateId = this._queryService.InsertJobState(
-                            StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = scheduledTask.Job.QueueName, Reason = "Job enqueued by Recurring Scheduler" },
-                            insertedJob.Id),
-                            db);
-                        this._queryService.SetJobState(jobId, stateId, EnqueuedState.DefaultName, db);
-                        this._queryService.InsertJobToQueue(jobId, scheduledTask.Job.QueueName, db);
-                        tran.Complete();
-                        return true;
-                    }
-                    //if workflow scheduled
-                    else if (!string.IsNullOrEmpty(scheduleEntity.WorkflowInvocationData))
-                    {
-                        var scheduledTask = ScheduleEntity.ToScheduleTask(scheduleEntity);
-                        scheduledTask = caluculateNext(scheduledTask);
-                        scheduleEntity.LastInvocation = scheduledTask.LastInvocation;
-                        scheduleEntity.NextInvocation = scheduledTask.NextInvocation;
-                        this._queryService.UpdateScheduledItem(scheduleEntity, t => new { t.LastInvocation, t.NextInvocation }, db);
-
-                        var rootJobs = scheduledTask.Workflow.GetRootJobs().ToDictionary(t => t.TempId, null);
-                        scheduledTask.Workflow.SaveWorkflow((workflowJob) => {
-                            workflowJob.QueueJob.ScheduleName = scheduleEntity.Name;
-                            return CreateAndEnqueueJob(
-                                queueJob: workflowJob.QueueJob,
-                                state: rootJobs.ContainsKey(workflowJob.TempId) ?
-                                    new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = "Automatically enqueued by Recurring Scheduler as part of workflow because not parent jobs to wait for." } as IState
-                                    : new AwaitingState() { Reason = "Waiting for other job/s to finish.", CreatedAt = DateTime.UtcNow } as IState,
-                                db: db
-                                );
-                        });
-                        tran.Complete();
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
+                    var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued by Recurring Scheduler", caluculateNext, db);
+                    tran.Complete();
+                    return result;
                 }
             }
         }
 
+        private bool EnqueueScheduledTaskAndRecalculateNextTime(ScheduleEntity scheduleEntity, string reasonToEnqueue, Func<ScheduledTask, ScheduledTask> caluculateNext, Database db)
+        {
+            var scheduledTask = ScheduleEntity.ToScheduleTask(scheduleEntity);
+
+            //if calculate delegate exists, calculate next invocation and save, otherwise (manual trigger), skip
+            if (caluculateNext != null)
+            {
+                scheduledTask = caluculateNext(scheduledTask);
+                scheduleEntity.LastInvocation = scheduledTask.LastInvocation;
+                scheduleEntity.NextInvocation = scheduledTask.NextInvocation;
+                this._queryService.UpdateScheduledItem(scheduleEntity, t => new { t.LastInvocation, t.NextInvocation }, db);
+            }
+
+            //if job scheduled
+            if (!string.IsNullOrEmpty(scheduleEntity.JobInvocationData))
+            {
+                var insertedJob = JobEntity.FromScheduleEntity(scheduledTask);
+                insertedJob.ScheduleName = scheduleEntity.Name;
+                var jobId = this._queryService.InsertJob(insertedJob, db);
+                var stateId = this._queryService.InsertJobState(
+                    StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = scheduledTask.Job.QueueName, Reason = reasonToEnqueue },
+                    insertedJob.Id),
+                    db);
+                this._queryService.SetJobState(jobId, stateId, EnqueuedState.DefaultName, db);
+                this._queryService.InsertJobToQueue(jobId, scheduledTask.Job.QueueName, db);
+                return true;
+            }
+            //if workflow scheduled
+            else if (!string.IsNullOrEmpty(scheduleEntity.WorkflowInvocationData))
+            {
+                var rootJobs = scheduledTask.Workflow.GetRootJobs().ToDictionary(t => t.TempId, null);
+                scheduledTask.Workflow.SaveWorkflow((workflowJob) => {
+                    workflowJob.QueueJob.ScheduleName = scheduleEntity.Name;
+                    return CreateAndEnqueueJob(
+                        queueJob: workflowJob.QueueJob,
+                        state: rootJobs.ContainsKey(workflowJob.TempId) ?
+                            new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = reasonToEnqueue } as IState
+                            : new AwaitingState() { Reason = "Waiting for other job/s to finish.", CreatedAt = DateTime.UtcNow } as IState,
+                        db: db
+                        );
+                });
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
 
         public override int CreateOrUpdateRecurringTask(ScheduledTask job)
         {
@@ -369,7 +371,20 @@ namespace Pulse.SqlStorage
             }
         }
 
-        public override void TriggerNextJobs(int finishedJobId)
+        public override int RemoveScheduledItem(string name)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    var result = this._queryService.RemoveScheduledItem(name, db);
+                    tran.Complete();
+                    return result;
+                }
+            }
+        }
+
+        public override void EnqueueAwaitingWorkflowJobs(int finishedJobId)
         {
             using (var db = GetDatabase())
             {
@@ -386,6 +401,24 @@ namespace Pulse.SqlStorage
                         this._queryService.InsertJobToQueue(job.Id, job.Queue, db);
                     }
                     tran.Complete();
+                }
+            }
+        }
+
+        public override void TriggerScheduledJob(string name)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    var scheduleEntity = this._queryService.LockScheduledItem(name, db);
+                    if (scheduleEntity == null)
+                    {
+                        return;
+                    }
+                    var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued because scheduled job was triggered manually.", caluculateNext: null, db: db);
+                    tran.Complete();
+                    return;
                 }
             }
         }

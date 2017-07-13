@@ -42,7 +42,7 @@ namespace Pulse.Core
             bool onlyIfLastFinishedOrFailed = false)
         {
             var job = Job.FromExpression(methodCall);
-            var id = GetRecurringJobId(job);
+            var id = GetRecurringJobName(job);
 
             Instance.Value.AddOrUpdate(id, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
         }
@@ -55,35 +55,35 @@ namespace Pulse.Core
             bool onlyIfLastFinishedOrFailed = false)
         {
             var job = Job.FromExpression(methodCall);
-            var id = GetRecurringJobId(job);
+            var id = GetRecurringJobName(job);
 
             Instance.Value.AddOrUpdate(id, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate(
-            string recurringJobId,
+            string recurringJobName,
             Expression<Action> methodCall,
             Func<string> cronExpression,
             TimeZoneInfo timeZone = null,
             string queue = EnqueuedState.DefaultQueue,
             bool onlyIfLastFinishedOrFailed = false)
         {
-            AddOrUpdate(recurringJobId, methodCall, cronExpression(), timeZone, queue, onlyIfLastFinishedOrFailed);
+            AddOrUpdate(recurringJobName, methodCall, cronExpression(), timeZone, queue, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate<T>(
-            string recurringJobId,
+            string recurringJobName,
             Expression<Action<T>> methodCall,
             Func<string> cronExpression,
             TimeZoneInfo timeZone = null,
             string queue = EnqueuedState.DefaultQueue,
             bool onlyIfLastFinishedOrFailed = false)
         {
-            AddOrUpdate(recurringJobId, methodCall, cronExpression(), timeZone, queue, onlyIfLastFinishedOrFailed);
+            AddOrUpdate(recurringJobName, methodCall, cronExpression(), timeZone, queue, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate(
-            string recurringJobId,
+            string recurringJobName,
             Expression<Action> methodCall,
             string cronExpression,
             TimeZoneInfo timeZone = null,
@@ -91,11 +91,11 @@ namespace Pulse.Core
             bool onlyIfLastFinishedOrFailed = false)
         {
             var job = Job.FromExpression(methodCall);
-            Instance.Value.AddOrUpdate(recurringJobId, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
+            Instance.Value.AddOrUpdate(recurringJobName, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate<T>(
-            string recurringJobId,
+            string recurringJobName,
             Expression<Action<T>> methodCall,
             string cronExpression,
             TimeZoneInfo timeZone = null,
@@ -103,7 +103,7 @@ namespace Pulse.Core
             bool onlyIfLastFinishedOrFailed = false)
         {
             var job = Job.FromExpression(methodCall);
-            Instance.Value.AddOrUpdate(recurringJobId, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
+            Instance.Value.AddOrUpdate(recurringJobName, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate(
@@ -134,7 +134,7 @@ namespace Pulse.Core
             bool onlyIfLastFinishedOrFailed = false)
         {
             var job = Job.FromExpression(methodCall);
-            var id = GetRecurringJobId(job);
+            var id = GetRecurringJobName(job);
 
             Instance.Value.AddOrUpdate(id, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
         }
@@ -147,35 +147,35 @@ namespace Pulse.Core
             bool onlyIfLastFinishedOrFailed = false)
         {
             var job = Job.FromExpression(methodCall);
-            var id = GetRecurringJobId(job);
+            var id = GetRecurringJobName(job);
 
             Instance.Value.AddOrUpdate(id, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate(
-            string recurringJobId,
+            string recurringJobName,
             Expression<Func<Task>> methodCall,
             Func<string> cronExpression,
             TimeZoneInfo timeZone = null,
             string queue = EnqueuedState.DefaultQueue,
             bool onlyIfLastFinishedOrFailed = false)
         {
-            AddOrUpdate(recurringJobId, methodCall, cronExpression(), timeZone, queue, onlyIfLastFinishedOrFailed);
+            AddOrUpdate(recurringJobName, methodCall, cronExpression(), timeZone, queue, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate<T>(
-            string recurringJobId,
+            string recurringJobName,
             Expression<Func<T, Task>> methodCall,
             Func<string> cronExpression,
             TimeZoneInfo timeZone = null,
             string queue = EnqueuedState.DefaultQueue,
             bool onlyIfLastFinishedOrFailed = false)
         {
-            AddOrUpdate(recurringJobId, methodCall, cronExpression(), timeZone, queue, onlyIfLastFinishedOrFailed);
+            AddOrUpdate(recurringJobName, methodCall, cronExpression(), timeZone, queue, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate(
-            string recurringJobId,
+            string recurringJobName,
             Expression<Func<Task>> methodCall,
             string cronExpression,
             TimeZoneInfo timeZone = null,
@@ -183,11 +183,11 @@ namespace Pulse.Core
             bool onlyIfLastFinishedOrFailed = false)
         {
             var job = Job.FromExpression(methodCall);
-            Instance.Value.AddOrUpdate(recurringJobId, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
+            Instance.Value.AddOrUpdate(recurringJobName, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate<T>(
-            string recurringJobId,
+            string recurringJobName,
             Expression<Func<T, Task>> methodCall,
             string cronExpression,
             TimeZoneInfo timeZone = null,
@@ -195,30 +195,30 @@ namespace Pulse.Core
             bool onlyIfLastFinishedOrFailed = false)
         {
             var job = Job.FromExpression(methodCall);
-            Instance.Value.AddOrUpdate(recurringJobId, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
+            Instance.Value.AddOrUpdate(recurringJobName, job, cronExpression, timeZone ?? TimeZoneInfo.Utc, queue, onlyIfLastFinishedOrFailed);
         }
 
         public static void AddOrUpdate<T>(
-            string recurringJobId,
+            string recurringJobName,
             Expression<Func<T, Task>> methodCall,
             string cronExpression,
             RecurringJobOptions options)
         {
             var job = Job.FromExpression(methodCall);
-            Instance.Value.AddOrUpdate(recurringJobId, job, cronExpression, options);
+            Instance.Value.AddOrUpdate(recurringJobName, job, cronExpression, options);
         }
 
-        public static void RemoveIfExists(string recurringJobId)
+        public static void RemoveIfExists(string recurringJobName)
         {
-            Instance.Value.RemoveIfExists(recurringJobId);
+            Instance.Value.RemoveIfExists(recurringJobName);
         }
 
-        public static void Trigger(string recurringJobId)
+        public static void Trigger(string recurringJobName)
         {
-            Instance.Value.Trigger(recurringJobId);
+            Instance.Value.Trigger(recurringJobName);
         }
 
-        private static string GetRecurringJobId(Job job)
+        private static string GetRecurringJobName(Job job)
         {
             return $"{job.Type.ToGenericTypeString()}.{job.Method.Name}";
         }

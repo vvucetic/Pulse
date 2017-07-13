@@ -12,9 +12,9 @@ namespace Pulse.Core
         private static readonly Lazy<RecurringManager> Instance = new Lazy<RecurringManager>(
                     () => new RecurringManager());
 
-        public static void AddOrUpdate(string recurringJobId, Workflow workflow, string cron)
+        public static void AddOrUpdate(string recurringJobName, Workflow workflow, string cron)
         {
-            Instance.Value.AddOrUpdate(recurringJobId, workflow, cron);
+            Instance.Value.AddOrUpdate(recurringJobName, workflow, cron);
         }
     }
 }

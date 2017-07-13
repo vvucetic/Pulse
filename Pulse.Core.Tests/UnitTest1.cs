@@ -38,6 +38,14 @@ namespace Pulse.Core.Tests
             {
                 Queues = new [] {"default"}
             });
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                while(true)
+                {
+                    Thread.Sleep(10000);
+                    RecurringJob.Trigger("test workflow");
+                }
+            });
             Thread.Sleep(TimeSpan.FromDays(1));
         }
 

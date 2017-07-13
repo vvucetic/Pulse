@@ -137,6 +137,17 @@ WHERE s.NextInvocation < GETUTCDATE() AND (s.OnlyIfLastFinishedOrFailed=0 OR NOT
             return db.Query<ScheduleEntity>(sql, new { states = new string[] { ProcessingState.DefaultName, ScheduledState.DefaultName, AwaitingState.DefaultName, EnqueuedState.DefaultName } }).FirstOrDefault();
         }
 
+        public ScheduleEntity LockScheduledItem(string name, Database db)
+        {
+            var sql = $@";update top (1) s
+set s.LastInvocation = GETUTCDATE()
+output INSERTED.*
+from Schedule s
+WHERE s.Name = @name
+";
+            return db.Query<ScheduleEntity>(sql, new { name = name }).FirstOrDefault();
+        }
+
         public int UpdateScheduledItem(ScheduleEntity scheduleEntity, Expression<Func<ScheduleEntity, object>> fields, Database db)
         {
             return db.Update<ScheduleEntity>(scheduleEntity, fields);
@@ -152,6 +163,11 @@ when matched then update set Cron = Source.Cron, LastInvocation = Source.LastInv
 when not matched then insert(Name, Cron, LastInvocation, NextInvocation, JobInvocationData, WorkflowInvocationData, OnlyIfLastFinishedOrFailed) values(Source.Name,Source.Cron,Source.LastInvocation,Source.NextInvocation,Source.JobInvocationData,Source.WorkflowInvocationData, Source.OnlyIfLastFinishedOrFailed);
 ";
             return db.Execute(sql, new { name = scheduledTask.Name, cron = scheduledTask.Cron, lastInvocation = scheduledTask.LastInvocation, nextInvocation = scheduledTask.NextInvocation, jobInvocationData = JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(scheduledTask)), workflowInvocationData = JobHelper.ToJson(scheduledTask.Workflow), onlyIfLastFinishedOrFailed = scheduledTask.OnlyIfLastFinishedOrFailed });
+        }
+
+        public int RemoveScheduledItem(string name, Database db)
+        {
+            return db.Delete<ScheduleEntity>(name);
         }
 
         public void InsertJobCondition(JobConditionEntity jobCondition, Database db)
