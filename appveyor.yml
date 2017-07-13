@@ -3,6 +3,13 @@ branches:
   only:
   - master
 image: Visual Studio 2017
+init:
+- ps: >-
+    $env:buildVersion = "$env:packageVersion.$env:appveyor_build_number"
+
+    $env:nugetVersion = "$env:packageVersion-beta-$env:appveyor_build_number"
+
+    Update-AppveyorBuild -Version $env:buildVersion
 assembly_info:
   patch: true
   file: '**\AssemblyInfo.*'
