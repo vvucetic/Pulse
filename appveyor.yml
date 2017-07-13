@@ -28,7 +28,7 @@ deploy:
 - provider: NuGet
   api_key:
     secure: YKKGGuDaZrjpiG0uAhelmYtuOs1Y6YbCzz/ThuojT3TCzTIqf2PnwajT1eFEsbQx
-  artifact: Pulse.Core, Pulse.SqlStorage
+  artifact: /.*\.nupkg/
   on:
     branch: master
 notifications:

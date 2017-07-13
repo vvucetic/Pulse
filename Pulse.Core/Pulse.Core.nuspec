@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+    <metadata>
+        <id>Pulse.Core</id>
+        <version>1.0.0</version>
+        <title>Pulse Core Components</title>
+        <authors>Vedran Vučetić</authors>
+        <owners>vvucetic</owners>
+        <projectUrl>https://github.com/vvucetic/Pulse/</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>Pulse is background job engine for executing jobs in background in reliable way, resistant to host (application or machine) restarts or power loss because its baked by persistend storage.</description>
+        <summary>Core components for Pulse - background job engine.</summary>
+        <dependencies>
+            <group targetFramework=".NETFramework4.5.2">
+                <dependency id="ncrontab" version="3.3.0" />
+                <dependency id="Newtonsoft.Json" version="10.0.3" />
+            </group>
+        </dependencies>
+    </metadata>
+    <files />
+</package>
