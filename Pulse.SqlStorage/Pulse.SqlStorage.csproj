@@ -47,6 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CustomDatabaseFactory.cs" />
     <Compile Include="Entities\JobConditionEntity.cs" />
     <Compile Include="Entities\QueueEntity.cs" />
     <Compile Include="Entities\ScheduleEntity.cs" />
@@ -55,6 +56,7 @@
     <Compile Include="Entities\JobEntity.cs" />
     <Compile Include="QueryService.cs" />
     <Compile Include="ScheduledJobInvocationData.cs" />
+    <Compile Include="SqlServerObjectsInstaller.cs" />
     <Compile Include="SqlServerStorageExtensions.cs" />
     <Compile Include="SqlServerStorageOptions.cs" />
     <Compile Include="SqlStorage.cs" />
@@ -71,6 +73,9 @@
       <Project>{ebf23179-1649-4b89-bdaa-430ad0d2825a}</Project>
       <Name>Pulse.Core</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Install.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

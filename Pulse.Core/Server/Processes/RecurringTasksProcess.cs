@@ -33,6 +33,7 @@ namespace Pulse.Core.Server.Processes
                     _logger.Log($"{jobsEnqueued} scheduled job(s)/workflow(s) enqueued by Recurring Tasks Process.");
                 }
             }
+            //TODO: refactor to catch exception in storage layer
             catch (SqlException sqlEx) when (sqlEx.Number == 1205)
             {
                 //deadlock, just skip, other process on other server is taking care of it...
