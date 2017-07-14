@@ -30,6 +30,8 @@ namespace Pulse.SqlStorage
             this._connectionStringName = connectionStringName ?? throw new ArgumentNullException(nameof(connectionStringName));
             this._options = options ?? throw new ArgumentNullException(nameof(options));
             this._queryService = new QueryService(this._options);
+            CustomDatabaseFactory.Setup(options.SchemaName, connectionStringName);
+            Initialize();
         }
 
         public override QueueJob FetchNextJob(string[] queues, string workerId)
@@ -441,6 +443,17 @@ namespace Pulse.SqlStorage
             }
         }
 
+        private void Initialize()
+        {
+            if (_options.PrepareSchemaIfNecessary)
+            {
+                using (var db = GetDatabase())
+                {
+                    SqlServerObjectsInstaller.Install(db, _options.SchemaName);
+                };
+            }
+        }
+
         private string GetConnectionString(string nameOrConnectionString)
         {
             if (IsConnectionString(nameOrConnectionString))
@@ -478,7 +491,7 @@ namespace Pulse.SqlStorage
 
         private Database GetDatabase(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            return new Database(this._connectionStringName);
+            return CustomDatabaseFactory.DbFactory.GetDatabase();
         }
         public override void WriteOptionsToLog(ILog logger)
         {
