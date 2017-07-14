@@ -17,5 +17,9 @@
             </group>
         </dependencies>
     </metadata>
-    <files />
+    <files>
+		<file src="Pulse.Core.dll" target="lib\net452" />
+		<file src="Pulse.Core.xml" target="lib\net452" />
+		<file src="Pulse.Core.pdb" target="lib\net452" />
+	</files>
 </package>
