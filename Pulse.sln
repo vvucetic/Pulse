@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pulse.SqlStorage", "Pulse.SqlStorage\Pulse.SqlStorage.csproj", "{E57B8946-0D20-41F4-957A-E7457F8E1F2A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pulse.SqlStorage", "src\Pulse.SqlStorage\Pulse.SqlStorage.csproj", "{E57B8946-0D20-41F4-957A-E7457F8E1F2A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pulse.Core.Tests", "Pulse.Core.Tests\Pulse.Core.Tests.csproj", "{A49C7782-D4DD-4807-9636-03A31850C4C5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pulse.Core.Tests", "src\Pulse.Core.Tests\Pulse.Core.Tests.csproj", "{A49C7782-D4DD-4807-9636-03A31850C4C5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pulse.Core", "Pulse.Core\Pulse.Core.csproj", "{EBF23179-1649-4B89-BDAA-430AD0D2825A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pulse.Core", "src\Pulse.Core\Pulse.Core.csproj", "{EBF23179-1649-4B89-BDAA-430AD0D2825A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

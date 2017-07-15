@@ -18,7 +18,7 @@
         </dependencies>
     </metadata>
     <files>
-		<file src="..\Pulse.Core\bin\Release\Pulse.Core.dll" target="lib\net452" />
-		<file src="..\Pulse.Core\bin\Release\Pulse.Core.pdb" target="lib\net452" />
+		<file src="..\src\Pulse.Core\bin\Release\Pulse.Core.dll" target="lib\net452" />
+		<file src="..\src\Pulse.Core\bin\Release\Pulse.Core.pdb" target="lib\net452" />
 	</files>
 </package>
