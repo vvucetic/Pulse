@@ -1,5 +1,7 @@
 # Pulse
 [![Build status](https://ci.appveyor.com/api/projects/status/epame8a9nd96l7da?svg=true)](https://ci.appveyor.com/project/vvucetic/pulse)
+[![GitHub license](https://img.shields.io/badge/license-GPL-blue.svg)](https://raw.githubusercontent.com/vvucetic/Pulse/master/LICENSE)
+[![NuGet Pre Release](https://img.shields.io/nuget/vpre/PulseEngine.svg)](https://www.nuget.org/packages/PulseEngine/)
 
 Pulse is background job engine for executing jobs in background in reliable way, resistant to host (application or machine) restarts or power loss because its baked by persistend storage. It is inspired and unofficially forked from Hangfire (Hangfire is production ready, unlike Pulse).
 
