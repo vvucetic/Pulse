@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+    <metadata>
+        <id>Pulse.Core</id>
+        <version>1.0.0</version>
+        <title>Pulse</title>
+        <authors>Vedran Vučetić</authors>
+        <owners>vvucetic</owners>
+        <projectUrl>https://github.com/vvucetic/Pulse/</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>Pulse is background job engine for executing jobs in background in reliable way, resistant to host (application or machine) restarts or power loss because its baked by persistend storage.</description>
+        <summary>Pulse - background job engine.</summary>
+        <dependencies>
+            <group targetFramework=".NETFramework4.5.2">
+                <dependency id="Pulse.Core" version="[0.0.0]" />
+                <dependency id="Pulse.SqlStorage" version="[0.0.0]" />
+            </group>
+        </dependencies>
+    </metadata>
+    <files>
+	</files>
+</package>
