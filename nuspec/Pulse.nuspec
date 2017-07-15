@@ -12,8 +12,8 @@
         <summary>Pulse - background job engine.</summary>
         <dependencies>
             <group targetFramework=".NETFramework4.5.2">
-                <dependency id="Pulse.Core" version="[*]" />
-                <dependency id="Pulse.SqlStorage" version="[*]" />
+                <dependency id="Pulse.Core" version="*" />
+                <dependency id="Pulse.SqlStorage" version="*" />
             </group>
         </dependencies>
     </metadata>
