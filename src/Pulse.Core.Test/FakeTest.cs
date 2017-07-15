@@ -1,16 +1,16 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Pulse.SqlStorage;
-using Pulse.Core.Common;
 using System.Diagnostics;
-using Pulse.Core.Server;
 using System.Threading;
+using Pulse.Core.Common;
+using Pulse.SqlStorage;
 using System.Linq;
+using Pulse.Core.Server;
 
-namespace Pulse.Core.Tests
+namespace Pulse.Core.Test
 {
     [TestClass]
-    public class CoreTests
+    public class FakeTest
     {
         [TestMethod]
         public void JobFromExpression()
@@ -36,11 +36,11 @@ namespace Pulse.Core.Tests
             GlobalConfiguration.Configuration.UseSqlServerStorage("db");
             var server = new BackgroundJobServer(new BackgroundJobServerOptions()
             {
-                Queues = new [] {"default"}
+                Queues = new[] { "default" }
             });
             System.Threading.Tasks.Task.Run(() =>
             {
-                while(true)
+                while (true)
                 {
                     Thread.Sleep(10000);
                     RecurringJob.Trigger("test workflow");
