@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
     <metadata>
-        <id>Pulse</id>
+        <id>PulseEngine</id>
         <version>1.0.0</version>
         <title>Pulse</title>
         <authors>Vedran Vučetić</authors>
