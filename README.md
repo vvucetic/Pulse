@@ -44,7 +44,7 @@ var client = new BackgroundJobClient();
 client.CreateAndEnqueue(wf);
 ```
 
-Execution will like this:
+Execution will be like this:
 
 ![Workflow diagram](https://raw.githubusercontent.com/vvucetic/Pulse/master/Assets/workflow.png)
 

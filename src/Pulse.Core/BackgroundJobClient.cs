@@ -23,13 +23,13 @@ namespace Pulse.Core
             this._storage = storage;
         }
 
-        public int CreateAndEnqueue(Job job, string queue = "default", int maxRetries = 10)
+        public int CreateAndEnqueue(Job job, string queue = "default", int maxRetries = 10, Guid? contextId = null)
         {
             if(job == null) throw new ArgumentException("Job must not be empty", nameof(job));
             if (string.IsNullOrEmpty(queue)) throw new ArgumentException("Queue must not be empty", nameof(queue));
             return _storage.CreateAndEnqueueJob(new QueueJob()
             {
-                ContextId = null,
+                ContextId = contextId,
                 Job = job,
                 QueueName = queue,
                 MaxRetries = maxRetries
