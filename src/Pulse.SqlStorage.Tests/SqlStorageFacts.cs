@@ -34,6 +34,15 @@ namespace Pulse.SqlStorage.Tests
             Assert.Equal("options", exception.ParamName);
         }
 
+        [Fact]
+        public void Ctor_ThrowsAnException_WhenQueryServiceIsNull()
+        {
+            var exception = Assert.Throws<ArgumentNullException>(
+                () => new SqlStorage("", new SqlServerStorageOptions(), null));
+
+            Assert.Equal("queryService", exception.ParamName);
+        }
+
         //[Fact]
         //public void Ctor_SetsSchemaNameToAllPocos_WhenInitialized()
         //{

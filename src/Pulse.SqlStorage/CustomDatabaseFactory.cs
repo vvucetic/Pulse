@@ -13,14 +13,14 @@ namespace Pulse.SqlStorage
     {
         public static DatabaseFactory DbFactory { get; set; }
 
-        public static void Setup(string schemaName, string connectionStringName)
+        public static void Setup(string schemaName, string connectionString)
         {
             
             var fluentConfig = NPoco.FluentMappings.FluentMappingConfiguration.Configure(new CustomMappings(schemaName));
             
             DbFactory = DatabaseFactory.Config(x =>
             {
-                x.UsingDatabase(() => new Database(connectionStringName));
+                x.UsingDatabase(() => new Database(connectionString, "System.Data.SqlClient"));
                 x.WithFluentConfig(fluentConfig);
             });
         }

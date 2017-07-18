@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Pulse.SqlStorage
 {
-    internal class QueryService
+    public class QueryService : IQueryService
     {
         private readonly SqlServerStorageOptions _options;
         public QueryService(SqlServerStorageOptions options)

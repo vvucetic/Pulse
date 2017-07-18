@@ -19,18 +19,23 @@ namespace Pulse.SqlStorage
     {
         private readonly string _connectionStringName;
         private readonly SqlServerStorageOptions _options;
-        private readonly QueryService _queryService;
+        private readonly IQueryService _queryService;
         
         public SqlStorage(string connectionStringName) : this(connectionStringName, new SqlServerStorageOptions())
         {
         }
 
-        public SqlStorage(string connectionStringName, SqlServerStorageOptions options)
+        public SqlStorage(string connectionStringName, SqlServerStorageOptions options) : this (connectionStringName, options, new QueryService(options))
+        {
+
+        }
+
+        public SqlStorage(string connectionStringName, SqlServerStorageOptions options, IQueryService queryService)
         {
             this._connectionStringName = connectionStringName ?? throw new ArgumentNullException(nameof(connectionStringName));
             this._options = options ?? throw new ArgumentNullException(nameof(options));
-            this._queryService = new QueryService(this._options);
-            CustomDatabaseFactory.Setup(options.SchemaName, connectionStringName);
+            this._queryService = queryService ?? throw new ArgumentNullException(nameof(queryService));
+            CustomDatabaseFactory.Setup(options.SchemaName, GetConnectionString(connectionStringName));
             Initialize();
         }
 

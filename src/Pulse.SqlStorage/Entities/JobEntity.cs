@@ -27,7 +27,7 @@ namespace Pulse.SqlStorage.Entities
 
         //public string Arguments { get; set; }
 
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? ExpireAt { get; set; }
 

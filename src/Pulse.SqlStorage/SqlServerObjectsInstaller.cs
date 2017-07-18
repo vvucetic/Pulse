@@ -20,7 +20,7 @@ namespace Pulse.SqlStorage
 
         public static void Install(Database db)
         {
-            Install(db, null);
+            Install(db, SqlServerStorageOptions.DefaultSchema);
         }
 
         public static void Install(Database db, string schema)
@@ -64,7 +64,7 @@ namespace Pulse.SqlStorage
             }
 
 
-            Log.Log(LogLevel.Information, "Hangfire SQL objects installed.");
+            Log.Log(LogLevel.Information, "Pulse SQL objects installed.");
         }
 
         private static bool IsSqlEditionSupported(Database db)

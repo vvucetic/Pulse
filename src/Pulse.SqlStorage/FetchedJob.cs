@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Pulse.SqlStorage
 {
-    internal class FetchedJob
+    public class FetchedJob
     {
         public int QueueJobId { get; set; }
         public int JobId { get; set; }

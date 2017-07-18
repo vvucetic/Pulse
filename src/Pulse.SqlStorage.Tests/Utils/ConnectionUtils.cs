@@ -43,6 +43,11 @@ namespace Pulse.SqlStorage.Tests.Utils
             return new Database(GetConnectionString(), DatabaseType.SqlServer2012, System.Data.IsolationLevel.ReadCommitted, false);
         }
 
+        public static Database GetFactoryDatabaseConnection()
+        {
+            return CustomDatabaseFactory.DbFactory.GetDatabase();
+        }
+
         public static Database GetMasterDatabaseConnection()
         {
             return new Database(GetMasterConnectionString(), DatabaseType.SqlServer2012, System.Data.IsolationLevel.ReadCommitted, false);
