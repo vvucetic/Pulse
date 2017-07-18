@@ -67,7 +67,8 @@ namespace Pulse.SqlStorage
                         RetryCount = jobEntity.RetryCount,
                         WorkerId = fetchedJob.WorkerId,
                         WorkflowId = jobEntity.WorkflowId,
-                        ScheduleName = jobEntity.ScheduleName
+                        ScheduleName = jobEntity.ScheduleName,
+                        Description = jobEntity.Description
                     };
                 }
             }
@@ -89,20 +90,9 @@ namespace Pulse.SqlStorage
 
         private int CreateAndEnqueueJob(QueueJob queueJob, IState state, Database db)
         {
-            var insertedJob = new JobEntity()
-            {
-                ContextId = queueJob.ContextId,
-                CreatedAt = DateTime.UtcNow,
-                InvocationData = JobHelper.ToJson(queueJob.Job),
-                NextJobs = JobHelper.ToJson(queueJob.NextJobs),
-                RetryCount = 1,
-                MaxRetries = queueJob.MaxRetries,
-                NextRetry = queueJob.NextRetry,
-                ExpireAt = queueJob.ExpireAt,
-                Queue = queueJob.QueueName,
-                WorkflowId = queueJob.WorkflowId,
-                ScheduleName = queueJob.ScheduleName
-            };
+            var insertedJob = JobEntity.FromQueueJob(queueJob);
+            insertedJob.CreatedAt = DateTime.UtcNow;
+            insertedJob.RetryCount = 0;
             var jobId = this._queryService.InsertJob(insertedJob, db);
             var stateId = this._queryService.InsertJobState(
                 StateEntity.FromIState(state,

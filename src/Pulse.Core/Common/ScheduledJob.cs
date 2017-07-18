@@ -21,5 +21,6 @@ namespace Pulse.Core.Common
         public DateTime NextInvocation { get; set; }
 
         public bool OnlyIfLastFinishedOrFailed { get; set; }
+
     }
 }

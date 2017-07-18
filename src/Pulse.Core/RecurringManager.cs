@@ -42,7 +42,8 @@ namespace Pulse.Core
                     Job = job,
                     QueueName = options.QueueName,
                     MaxRetries = options.MaxRetries,
-                    ContextId = options.ContextId
+                    ContextId = options.ContextId,
+                    Description = options.Description
                 },
                 OnlyIfLastFinishedOrFailed = options.OnlyIfLastFinishedOrFailed
             });

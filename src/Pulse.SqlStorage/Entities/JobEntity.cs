@@ -47,6 +47,8 @@ namespace Pulse.SqlStorage.Entities
 
         public string ScheduleName { get; set; }
 
+        public string Description { get; set; }
+
         public static JobEntity FromScheduleEntity(ScheduledTask scheduledJob)
         {
             return new JobEntity
@@ -60,7 +62,27 @@ namespace Pulse.SqlStorage.Entities
                 NextJobs = JobHelper.ToJson(scheduledJob.Job.NextJobs),
                 RetryCount = 1,
                 NextRetry = scheduledJob.Job.NextRetry,
-                Queue = scheduledJob.Job.QueueName
+                Queue = scheduledJob.Job.QueueName,
+                Description = scheduledJob.Job.Description
+            };
+        }
+
+        public static JobEntity FromQueueJob(QueueJob queueJob)
+        {
+            return new JobEntity
+            {
+                ContextId = queueJob.ContextId,
+                CreatedAt = queueJob.CreatedAt,
+                InvocationData = JobHelper.ToJson(queueJob.Job),
+                NextJobs = JobHelper.ToJson(queueJob.NextJobs),
+                RetryCount = queueJob.RetryCount,
+                MaxRetries = queueJob.MaxRetries,
+                NextRetry = queueJob.NextRetry,
+                ExpireAt = queueJob.ExpireAt,
+                Queue = queueJob.QueueName,
+                WorkflowId = queueJob.WorkflowId,
+                ScheduleName = queueJob.ScheduleName,
+                Description = queueJob.Description
             };
         }
     }

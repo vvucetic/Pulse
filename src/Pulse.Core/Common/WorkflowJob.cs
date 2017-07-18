@@ -14,7 +14,7 @@ namespace Pulse.Core.Common
         public Guid TempId { get; set; } = Guid.NewGuid();
         public QueueJob QueueJob { get; set; }
         public List<WorkflowJob> NextJobs { get; set; } = new List<WorkflowJob>();
-        public static WorkflowJob MakeJob(Expression<Action> methodCall, string queue = EnqueuedState.DefaultQueue, Guid? contextId = null, int maxRetries = 10)
+        public static WorkflowJob MakeJob(Expression<Action> methodCall, string queue = EnqueuedState.DefaultQueue, Guid? contextId = null, int maxRetries = 10, string description = null)
         {
             return new WorkflowJob()
             {
@@ -23,7 +23,8 @@ namespace Pulse.Core.Common
                     Job = Job.FromExpression(methodCall),
                     QueueName = queue,
                     ContextId = contextId,
-                    MaxRetries = maxRetries
+                    MaxRetries = maxRetries,
+                    Description = description
                 }
             };
         }
