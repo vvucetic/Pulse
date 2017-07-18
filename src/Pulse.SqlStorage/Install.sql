@@ -73,7 +73,7 @@ BEGIN
 	[Queue] [nvarchar](50) NULL,
 	[WorkflowId] [uniqueidentifier] NULL,
 	[ScheduleName] [nvarchar](100) NULL,
-	[Description] [nvarchar(1000)] NULL,
+	[Description] [nvarchar](1000) NULL,
 
 	 CONSTRAINT [PK_Pulse_Job] PRIMARY KEY CLUSTERED ([Id] ASC)
 	);

@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pulse.Core", "Pulse.Core\Pu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pulse.Core.Test", "Pulse.Core.Test\Pulse.Core.Test.csproj", "{820EFBE0-7AAD-438F-A3B3-D6AEEC6B81FC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{A9D495FA-D44D-41A5-AF2A-06F4EF93543A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pulse.SqlStorage.Tests", "Pulse.SqlStorage.Tests\Pulse.SqlStorage.Tests.csproj", "{6DDA4B99-3B8D-4D20-ACA7-B55F2364FABC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,8 +31,15 @@ Global
 		{820EFBE0-7AAD-438F-A3B3-D6AEEC6B81FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{820EFBE0-7AAD-438F-A3B3-D6AEEC6B81FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{820EFBE0-7AAD-438F-A3B3-D6AEEC6B81FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DDA4B99-3B8D-4D20-ACA7-B55F2364FABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DDA4B99-3B8D-4D20-ACA7-B55F2364FABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DDA4B99-3B8D-4D20-ACA7-B55F2364FABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DDA4B99-3B8D-4D20-ACA7-B55F2364FABC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6DDA4B99-3B8D-4D20-ACA7-B55F2364FABC} = {A9D495FA-D44D-41A5-AF2A-06F4EF93543A}
 	EndGlobalSection
 EndGlobal
