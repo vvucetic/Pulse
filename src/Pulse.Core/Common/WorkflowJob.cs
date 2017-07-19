@@ -31,6 +31,8 @@ namespace Pulse.Core.Common
 
         public WorkflowJob ContinueWith(WorkflowJob workflowJob)
         {
+            if (this.TempId == workflowJob.TempId)
+                throw new Exception("Job cannot continue with it self!");
             this.NextJobs.Add(workflowJob);
             return this;
         }
@@ -48,6 +50,8 @@ namespace Pulse.Core.Common
         {
             foreach (var job in workflowJobGroup.Jobs)
             {
+                if (this.TempId == job.TempId)
+                    throw new Exception("Job cannot continue with it self!");
                 this.NextJobs.Add(job);
             }
             return this;
@@ -57,6 +61,8 @@ namespace Pulse.Core.Common
         {
             foreach (var job in jobs)
             {
+                if (this.TempId == job.TempId)
+                    throw new Exception("Job cannot wait for its self!");
                 job.NextJobs.Add(this);
             }
             return this;

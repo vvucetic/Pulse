@@ -172,7 +172,7 @@ when not matched then insert(Name, Cron, LastInvocation, NextInvocation, JobInvo
 
         public int RemoveScheduledItem(string name, Database db)
         {
-            return db.Delete<ScheduleEntity>(name);
+            return db.Delete<ScheduleEntity>((object)name);
         }
 
         public void InsertJobCondition(JobConditionEntity jobCondition, Database db)

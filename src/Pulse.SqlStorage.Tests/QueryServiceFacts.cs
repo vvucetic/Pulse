@@ -1,5 +1,6 @@
 ﻿using Moq;
 using NFluent;
+using Pulse.Core.Common;
 using Pulse.Core.States;
 using Pulse.SqlStorage.Entities;
 using Pulse.SqlStorage.Tests.Utils;
@@ -395,6 +396,225 @@ namespace Pulse.SqlStorage.Tests
                 //make this fields same in order to next check to pass. Last invocation is always changed in LockFirstScheduledItem
                 returnedScheduledItem.LastInvocation = se.LastInvocation;
                 Check.That(returnedScheduledItem).HasFieldsWithSameValues(se);
+            }
+        }
+
+        #endregion
+
+        #region LockScheduledItem
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_LockScheduledItem_ReturnsNull_WhenDoesntExist(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            //CreateScheduledEntity(false, DateTime.Today.AddDays(1));
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var returnedScheduledItem = queryService.LockScheduledItem("item1", db);
+                Assert.Null(returnedScheduledItem);
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_LockScheduledItem_ReturnsNotNull_WhenExists(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            var sc1 = CreateScheduledEntity(false, DateTime.Today.AddDays(1), scheduleName: "sch1");
+            var sc2 = CreateScheduledEntity(false, DateTime.Today.AddDays(1), scheduleName: "sch2");
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var returnedScheduledItem = queryService.LockScheduledItem(sc1.Name, db);
+                Assert.NotNull(returnedScheduledItem);
+                Assert.NotEqual(returnedScheduledItem.LastInvocation, sc1.LastInvocation);
+                //make this fields same in order to next check to pass. Last invocation is always changed in LockFirstScheduledItem
+                returnedScheduledItem.LastInvocation = sc1.LastInvocation;
+                Check.That(returnedScheduledItem).HasFieldsWithSameValues(sc1);
+            }
+        }
+
+        #endregion
+
+        #region CreateOrUpdateRecurringJob
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_CreateOrUpdateRecurringJob_ReturnsNotNullWithJob_WhenExists(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var sc = new Core.Common.ScheduledTask()
+                {
+                    Cron = "0 0 0 0",
+                    Job = new Core.Common.QueueJob()
+                    {
+                        Description = "test",
+                        Job = Job.FromExpression(()=> Run_CreateOrUpdateRecurringJob_ReturnsNotNullWithJob_WhenExists("")),
+                        ContextId = Guid.NewGuid(),
+                        MaxRetries = 10,
+                        QueueName = "dflt"
+                    },
+                    Name = "recurring_name",
+                    OnlyIfLastFinishedOrFailed = true,
+                    LastInvocation = DateTime.Today,
+                    NextInvocation = DateTime.Today
+                };
+                var result = queryService.CreateOrUpdateRecurringJob(sc, db);
+                Assert.Equal(1, result);
+                var recurring = db.Query<ScheduleEntity>().FirstOrDefault();
+                Assert.Equal(sc.Cron, recurring.Cron);
+                Assert.Equal(sc.OnlyIfLastFinishedOrFailed, recurring.OnlyIfLastFinishedOrFailed);
+                Assert.Equal(sc.LastInvocation, recurring.LastInvocation);
+                Assert.Equal(sc.Name, recurring.Name);
+                Assert.Equal(sc.NextInvocation, recurring.NextInvocation);
+                Assert.Equal(JobHelper.ToJson(sc.Workflow), recurring.WorkflowInvocationData);
+                Assert.Equal(JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(sc)), recurring.JobInvocationData);
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_CreateOrUpdateRecurringJob_ReturnsNotNullWithWorkflow_WhenExists(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var job1 = WorkflowJob.MakeJob(() => Run_CreateOrUpdateRecurringJob_ReturnsNotNullWithWorkflow_WhenExists(""), "dflt2", Guid.NewGuid(), 4, "new");
+                var job2 = WorkflowJob.MakeJob(() => Run_CreateOrUpdateRecurringJob_ReturnsNotNullWithWorkflow_WhenExists("asd"), "dfldasdt2", Guid.NewGuid(), 2, "new2");
+                job1.ContinueWith(job2);
+                var sc = new Core.Common.ScheduledTask()
+                {
+                    Cron = "0 0 0 0",
+                    Workflow = new Workflow(job1),
+                    Name = "recurring_name",
+                    OnlyIfLastFinishedOrFailed = true,
+                    LastInvocation = DateTime.Today,
+                    NextInvocation = DateTime.Today
+                };
+                var result = queryService.CreateOrUpdateRecurringJob(sc, db);
+                Assert.Equal(1, result);
+                var recurring = db.Query<ScheduleEntity>().FirstOrDefault();
+                Assert.Equal(sc.Cron, recurring.Cron);
+                Assert.Equal(sc.OnlyIfLastFinishedOrFailed, recurring.OnlyIfLastFinishedOrFailed);
+                Assert.Equal(sc.LastInvocation, recurring.LastInvocation);
+                Assert.Equal(sc.Name, recurring.Name);
+                Assert.Equal(sc.NextInvocation, recurring.NextInvocation);
+                Assert.Equal(JobHelper.ToJson(sc.Workflow), recurring.WorkflowInvocationData);
+                Assert.Equal(JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(sc)), recurring.JobInvocationData);
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_CreateOrUpdateRecurringJob_UpdatesExistingRecurringJob(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var sc = new Core.Common.ScheduledTask()
+                {
+                    Cron = "0 0 0 0",
+                    Job = new Core.Common.QueueJob()
+                    {
+                        Description = "test",
+                        Job = Job.FromExpression(() => Run_CreateOrUpdateRecurringJob_ReturnsNotNullWithJob_WhenExists("")),
+                        ContextId = Guid.NewGuid(),
+                        MaxRetries = 10,
+                        QueueName = "dflt"
+                    },
+                    Name = "recurring_name",
+                    OnlyIfLastFinishedOrFailed = true,
+                    LastInvocation = DateTime.Today,
+                    NextInvocation = DateTime.Today
+                };
+                var result = queryService.CreateOrUpdateRecurringJob(sc, db);
+                var sc2 = new Core.Common.ScheduledTask()
+                {
+                    Cron = "0 0 0 0 0",
+                    Job = new Core.Common.QueueJob()
+                    {
+                        Description = "test 2",
+                        Job = Job.FromExpression(() => Run_CreateOrUpdateRecurringJob_ReturnsNotNullWithJob_WhenExists("")),
+                        ContextId = Guid.NewGuid(),
+                        MaxRetries = 2,
+                        QueueName = "dfdsasdlt"
+                    },
+                    Name = "recurring_name",
+                    OnlyIfLastFinishedOrFailed = false,
+                    LastInvocation = DateTime.Today,
+                    NextInvocation = DateTime.Today
+                };
+                var result2 = queryService.CreateOrUpdateRecurringJob(sc2, db);
+
+                Assert.Equal(1, result2);
+                var recurring = db.Query<ScheduleEntity>().FirstOrDefault();
+                Assert.Equal(sc2.Cron, recurring.Cron);
+                Assert.Equal(sc2.OnlyIfLastFinishedOrFailed, recurring.OnlyIfLastFinishedOrFailed);
+                Assert.Equal(sc2.LastInvocation, recurring.LastInvocation);
+                Assert.Equal(sc2.Name, recurring.Name);
+                Assert.Equal(sc2.NextInvocation, recurring.NextInvocation);
+                Assert.Equal(JobHelper.ToJson(sc2.Workflow), recurring.WorkflowInvocationData);
+                Assert.Equal(JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(sc2)), recurring.JobInvocationData);
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_CreateOrUpdateRecurringJob_UpdatesExistingRecurringWorkflow(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var job1 = WorkflowJob.MakeJob(() => Run_CreateOrUpdateRecurringJob_ReturnsNotNullWithWorkflow_WhenExists(""), "dflt2", Guid.NewGuid(), 4, "new");
+                var job2 = WorkflowJob.MakeJob(() => Run_CreateOrUpdateRecurringJob_ReturnsNotNullWithWorkflow_WhenExists("asd"), "dfldasdt2", Guid.NewGuid(), 2, "new2");
+                job1.ContinueWith(job2);
+                var sc = new Core.Common.ScheduledTask()
+                {
+                    Cron = "0 0 0 0",
+                    Workflow = new Workflow(job1),
+                    Name = "recurring_name",
+                    OnlyIfLastFinishedOrFailed = true,
+                    LastInvocation = DateTime.Today,
+                    NextInvocation = DateTime.Today
+                };
+                var result = queryService.CreateOrUpdateRecurringJob(sc, db);
+
+                job1 = WorkflowJob.MakeJob(() => Run_CreateOrUpdateRecurringJob_UpdatesExistingRecurringWorkflow(""), "dflt2", Guid.NewGuid(), 4, "new");
+                job2 = WorkflowJob.MakeJob(() => Run_CreateOrUpdateRecurringJob_UpdatesExistingRecurringWorkflow("asd"), "dfldasdt2", Guid.NewGuid(), 2, "new2");
+                job1.ContinueWith(job2);
+                var sc2 = new Core.Common.ScheduledTask()
+                {
+                    Cron = "0 0 0 0 12",
+                    Workflow = new Workflow(job1),
+                    Name = "recurring_name",
+                    OnlyIfLastFinishedOrFailed = false,
+                    LastInvocation = DateTime.Today,
+                    NextInvocation = DateTime.Today
+                };
+                var result2 = queryService.CreateOrUpdateRecurringJob(sc2, db);
+                Assert.Equal(1, result2);
+                var recurring = db.Query<ScheduleEntity>().FirstOrDefault();
+                Assert.Equal(sc2.Cron, recurring.Cron);
+                Assert.Equal(sc2.OnlyIfLastFinishedOrFailed, recurring.OnlyIfLastFinishedOrFailed);
+                Assert.Equal(sc2.LastInvocation, recurring.LastInvocation);
+                Assert.Equal(sc2.Name, recurring.Name);
+                Assert.Equal(sc2.NextInvocation, recurring.NextInvocation);
+                Assert.Equal(JobHelper.ToJson(sc2.Workflow), recurring.WorkflowInvocationData);
+                Assert.Equal(JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(sc2)), recurring.JobInvocationData);
             }
         }
 

@@ -21,6 +21,8 @@ namespace Pulse.Core.Common
         {
             foreach (var job in this.Jobs)
             {
+                if (job.TempId == workflowJob.TempId)
+                    throw new Exception("Job cannot continue with it self!");
                 job.NextJobs.Add(workflowJob);
             }
             return this;
