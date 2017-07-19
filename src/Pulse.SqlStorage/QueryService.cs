@@ -209,7 +209,7 @@ NOT EXISTS (SELECT * FROM [{this._options.SchemaName}].JobCondition jc WHERE jc.
 (
     select * from [{this._options.SchemaName}].JobCondition where ParentJobId=@jobId
     union all
-    select t.* from cte 
+    select jc.* from cte 
         inner join [{this._options.SchemaName}].JobCondition jc on cte.JobId = jc.ParentJobId
 )
 SELECT * FROM [{this._options.SchemaName}].Job j WHERE j.Id IN (SELECT JobId FROM cte)";

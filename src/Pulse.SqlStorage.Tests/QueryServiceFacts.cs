@@ -440,6 +440,40 @@ namespace Pulse.SqlStorage.Tests
 
         #endregion
 
+        #region RemoveScheduledItem
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_RemoveScheduledItem_ReturnsOne_WhenDeleted(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            CreateScheduledEntity(false, DateTime.Today.AddDays(1), scheduleName:"schitem");
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var result = queryService.RemoveScheduledItem("schitem", db);
+                Assert.Equal(1, result);
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_RemoveScheduledItem_ReturnsZero_WhenNoDeleted(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            //CreateScheduledEntity(false, DateTime.Today.AddDays(1), scheduleName: "schitem");
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var result = queryService.RemoveScheduledItem("schitem", db);
+                Assert.Equal(0, result);
+            }
+        }
+
+        #endregion
+
         #region CreateOrUpdateRecurringJob
 
         [Theory, CleanDatabase("TestSchema", "Pulse")]
@@ -615,6 +649,313 @@ namespace Pulse.SqlStorage.Tests
                 Assert.Equal(sc2.NextInvocation, recurring.NextInvocation);
                 Assert.Equal(JobHelper.ToJson(sc2.Workflow), recurring.WorkflowInvocationData);
                 Assert.Equal(JobHelper.ToJson(ScheduledJobInvocationData.FromScheduledJob(sc2)), recurring.JobInvocationData);
+            }
+        }
+
+        #endregion
+
+        #region MarkAsFinishedAndGetNextJobs
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_MarkAsFinishedAndGetNextJobs_ReturnsNextJob(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var job1 = CreateValidJob("default1", schema, state: EnqueuedState.DefaultName);
+                var job2 = CreateValidJob("default2", schema, state: AwaitingState.DefaultName);
+                var job3 = CreateValidJob("default3", schema, state: AwaitingState.DefaultName);
+                var job4 = CreateValidJob("default4", schema, state: AwaitingState.DefaultName);
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job2.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job3.Id,
+                    ParentJobId = job2.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job4.Id,
+                    ParentJobId = job3.Id
+                });
+                var result = queryService.MarkAsFinishedAndGetNextJobs(job1.Id, db);
+                Check.That(result).HasOneElementOnly().Which.HasFieldsWithSameValues(job2);
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_MarkAsFinishedAndGetNextJobs_ReturnsNextJobs(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var job1 = CreateValidJob("default1", schema, state: EnqueuedState.DefaultName);
+                var job2 = CreateValidJob("default2", schema, state: AwaitingState.DefaultName);
+                var job3 = CreateValidJob("default3", schema, state: AwaitingState.DefaultName);
+                var job4 = CreateValidJob("default4", schema, state: AwaitingState.DefaultName);
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job2.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job3.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job4.Id,
+                    ParentJobId = job1.Id
+                });
+                var result = queryService.MarkAsFinishedAndGetNextJobs(job1.Id, db);
+                Check.That(result).HasElementThatMatches(t => t.Id == job2.Id).Which.HasFieldsWithSameValues(job2);
+                Check.That(result).HasElementThatMatches(t => t.Id == job3.Id).Which.HasFieldsWithSameValues(job3);
+                Check.That(result).HasElementThatMatches(t => t.Id == job4.Id).Which.HasFieldsWithSameValues(job4);
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_MarkAsFinishedAndGetNextJobs_ReturnsNoNextJobs_WhenNoNextJobs(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var job1 = CreateValidJob("default1", schema, state: EnqueuedState.DefaultName);
+                var job2 = CreateValidJob("default2", schema, state: AwaitingState.DefaultName);
+                var job3 = CreateValidJob("default3", schema, state: AwaitingState.DefaultName);
+                var job4 = CreateValidJob("default4", schema, state: AwaitingState.DefaultName);
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job2.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job3.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job4.Id,
+                    ParentJobId = job1.Id
+                });
+                var result = queryService.MarkAsFinishedAndGetNextJobs(job4.Id, db);
+                Check.That(result).IsEmpty();
+            }
+        }
+
+        #endregion
+
+        #region GetDependentWorkflowTree
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_GetDependentWorkflowTree_ReturnsAllDependentJobs(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var job1 = CreateValidJob("default1", schema, state: EnqueuedState.DefaultName);
+                var job2 = CreateValidJob("default2", schema, state: AwaitingState.DefaultName);
+                var job3 = CreateValidJob("default3", schema, state: AwaitingState.DefaultName);
+                var job4 = CreateValidJob("default4", schema, state: AwaitingState.DefaultName);
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job2.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job3.Id,
+                    ParentJobId = job2.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job4.Id,
+                    ParentJobId = job3.Id
+                });
+                var result = queryService.GetDependentWorkflowTree(job1.Id, db);
+                Check.That(result).HasElementThatMatches(t => t.Id == job2.Id).Which.HasFieldsWithSameValues(job2);
+                Check.That(result).HasElementThatMatches(t => t.Id == job3.Id).Which.HasFieldsWithSameValues(job3);
+                Check.That(result).HasElementThatMatches(t => t.Id == job4.Id).Which.HasFieldsWithSameValues(job4);
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_GetDependentWorkflowTree_ReturnsNextJobs(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var job1 = CreateValidJob("default1", schema, state: EnqueuedState.DefaultName);
+                var job2 = CreateValidJob("default2", schema, state: AwaitingState.DefaultName);
+                var job3 = CreateValidJob("default3", schema, state: AwaitingState.DefaultName);
+                var job4 = CreateValidJob("default4", schema, state: AwaitingState.DefaultName);
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job2.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job3.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job4.Id,
+                    ParentJobId = job1.Id
+                });
+                var result = queryService.GetDependentWorkflowTree(job1.Id, db);
+                Check.That(result).HasElementThatMatches(t => t.Id == job2.Id).Which.HasFieldsWithSameValues(job2);
+                Check.That(result).HasElementThatMatches(t => t.Id == job3.Id).Which.HasFieldsWithSameValues(job3);
+                Check.That(result).HasElementThatMatches(t => t.Id == job4.Id).Which.HasFieldsWithSameValues(job4);
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_GetDependentWorkflowTree_ReturnsNoDependencies_WhenNoNextJobs(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var job1 = CreateValidJob("default1", schema, state: EnqueuedState.DefaultName);
+                var job2 = CreateValidJob("default2", schema, state: AwaitingState.DefaultName);
+                var job3 = CreateValidJob("default3", schema, state: AwaitingState.DefaultName);
+                var job4 = CreateValidJob("default4", schema, state: AwaitingState.DefaultName);
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job2.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job3.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job4.Id,
+                    ParentJobId = job1.Id
+                });
+                var result = queryService.GetDependentWorkflowTree(job4.Id, db);
+                Check.That(result).IsEmpty();
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_GetDependentWorkflowTree_ReturnsNextJobsWithMultipleBranches(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var job1 = CreateValidJob("default1", schema, state: EnqueuedState.DefaultName);
+                var job2 = CreateValidJob("default2", schema, state: AwaitingState.DefaultName);
+                var job3 = CreateValidJob("default3", schema, state: AwaitingState.DefaultName);
+                var job4 = CreateValidJob("default4", schema, state: AwaitingState.DefaultName);
+                var job5 = CreateValidJob("default5", schema, state: AwaitingState.DefaultName);
+                var job6 = CreateValidJob("default6", schema, state: AwaitingState.DefaultName);
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job2.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job3.Id,
+                    ParentJobId = job2.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job4.Id,
+                    ParentJobId = job2.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job5.Id,
+                    ParentJobId = job4.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job6.Id,
+                    ParentJobId = job4.Id
+                });
+                var result = queryService.GetDependentWorkflowTree(job1.Id, db);
+                Check.That(result).HasElementThatMatches(t => t.Id == job2.Id).Which.HasFieldsWithSameValues(job2);
+                Check.That(result).HasElementThatMatches(t => t.Id == job3.Id).Which.HasFieldsWithSameValues(job3);
+                Check.That(result).HasElementThatMatches(t => t.Id == job4.Id).Which.HasFieldsWithSameValues(job4);
+                Check.That(result).HasElementThatMatches(t => t.Id == job5.Id).Which.HasFieldsWithSameValues(job5);
+                Check.That(result).HasElementThatMatches(t => t.Id == job6.Id).Which.HasFieldsWithSameValues(job6);
+            }
+        }
+
+        [Theory, CleanDatabase("TestSchema", "Pulse")]
+        [InlineData("Pulse")]
+        [InlineData("TestSchema")]
+        public void Run_GetDependentWorkflowTree_ReturnsNextJobsWithMultipleBranches2(string schema)
+        {
+            CustomDatabaseFactory.Setup(schema, ConnectionUtils.GetConnectionString());
+            var queryService = new QueryService(new SqlServerStorageOptions() { SchemaName = schema });
+            using (var db = Utils.ConnectionUtils.GetFactoryDatabaseConnection())
+            {
+                var job1 = CreateValidJob("default1", schema, state: EnqueuedState.DefaultName);
+                var job2 = CreateValidJob("default2", schema, state: AwaitingState.DefaultName);
+                var job3 = CreateValidJob("default3", schema, state: AwaitingState.DefaultName);
+                var job4 = CreateValidJob("default4", schema, state: AwaitingState.DefaultName);
+                var job5 = CreateValidJob("default5", schema, state: AwaitingState.DefaultName);
+                var job6 = CreateValidJob("default6", schema, state: AwaitingState.DefaultName);
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job2.Id,
+                    ParentJobId = job1.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job3.Id,
+                    ParentJobId = job2.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job4.Id,
+                    ParentJobId = job2.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job5.Id,
+                    ParentJobId = job4.Id
+                });
+                db.Insert<JobConditionEntity>(new JobConditionEntity()
+                {
+                    JobId = job6.Id,
+                    ParentJobId = job4.Id
+                });
+                var result = queryService.GetDependentWorkflowTree(job4.Id, db);
+                Check.That(result).HasElementThatMatches(t => t.Id == job5.Id).Which.HasFieldsWithSameValues(job5);
+                Check.That(result).HasElementThatMatches(t => t.Id == job6.Id).Which.HasFieldsWithSameValues(job6);
             }
         }
 
