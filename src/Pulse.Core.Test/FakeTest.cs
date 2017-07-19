@@ -9,10 +9,12 @@ using Pulse.Core.Server;
 
 namespace Pulse.Core.Test
 {
-    [TestClass]
+    [Ignore]
+    //[TestClass]
     public class FakeTest
     {
         [TestMethod]
+        [Ignore]
         public void JobFromExpression()
         {
             var job = Job.FromExpression(() => Method(4, DateTime.UtcNow));

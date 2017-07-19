@@ -9,7 +9,7 @@ namespace Pulse.Core.States
 {
     public class ScheduledState : IState
     {
-        public static string DefaultName = "Scheduled";
+        public const string DefaultName = "Scheduled";
         public string Name => ScheduledState.DefaultName;
 
         public string Reason { get; set; }

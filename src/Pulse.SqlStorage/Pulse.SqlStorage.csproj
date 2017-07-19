@@ -51,7 +51,9 @@
     <Compile Include="Entities\JobConditionEntity.cs" />
     <Compile Include="Entities\QueueEntity.cs" />
     <Compile Include="Entities\ScheduleEntity.cs" />
+    <Compile Include="Entities\ServerEntity.cs" />
     <Compile Include="Entities\StateEntity.cs" />
+    <Compile Include="Entities\WorkerEntity.cs" />
     <Compile Include="FetchedJob.cs" />
     <Compile Include="Entities\JobEntity.cs" />
     <Compile Include="IQueryService.cs" />

@@ -17,12 +17,20 @@ namespace Pulse.SqlStorage.Tests.Utils
 
         private readonly IsolationLevel _isolationLevel;
 
+        //private readonly string _schema;
+
         private TransactionScope _transaction;
 
+        private readonly string[] _schemas;
+
+        private readonly string[] _defaultSchemas = new string [] { "pulse" };
+
         public CleanDatabaseAttribute(
-            IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+            params string[] schemas
+            )
         {
-            _isolationLevel = isolationLevel;
+            _isolationLevel = IsolationLevel.ReadCommitted;
+            _schemas = schemas ?? _defaultSchemas;
         }
 
         public override void Before(MethodInfo methodUnderTest)
@@ -31,11 +39,12 @@ namespace Pulse.SqlStorage.Tests.Utils
 
             if (!_sqlObjectInstalled)
             {
-                CreateAndInitializeDatabaseIfNotExists();
+                foreach (var schema in _schemas)
+                {
+                    CreateAndInitializeDatabaseIfNotExists(schema);
+                }
                 _sqlObjectInstalled = true;
             }
-
-
 
             if (_isolationLevel != IsolationLevel.Unspecified)
             {
@@ -58,7 +67,7 @@ namespace Pulse.SqlStorage.Tests.Utils
 
         }
 
-        private static void CreateAndInitializeDatabaseIfNotExists()
+        private static void CreateAndInitializeDatabaseIfNotExists(string schema)
         {
             var recreateDatabaseSql = String.Format(
                 @"if db_id('{0}') is null create database [{0}] COLLATE SQL_Latin1_General_CP1_CS_AS",
@@ -71,7 +80,7 @@ namespace Pulse.SqlStorage.Tests.Utils
 
             using (var db = ConnectionUtils.GetDatabaseConnection())
             {
-                SqlServerObjectsInstaller.Install(db);
+                SqlServerObjectsInstaller.Install(db, schema);
             }
         }
     }

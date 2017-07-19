@@ -22,7 +22,7 @@ namespace Pulse.SqlStorage
         ScheduleEntity LockFirstScheduledItem(Database db);
         ScheduleEntity LockScheduledItem(string name, Database db);
         List<JobEntity> MarkAsFinishedAndGetNextJobs(int jobId, Database db);
-        int RegisterWorker(string workerId, string serverId, Database db);
+        void RegisterWorker(string workerId, string serverId, Database db);
         int RemoveFromQueue(int queueJobId, Database db);
         int RemoveScheduledItem(string name, Database db);
         int RemoveServer(string serverId, Database db);

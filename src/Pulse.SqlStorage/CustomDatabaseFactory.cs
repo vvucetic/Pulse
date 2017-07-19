@@ -71,7 +71,7 @@ namespace Pulse.SqlStorage
                     x.Column(y => y.WorkerId);
                 });
             For<ScheduleEntity>()
-                .PrimaryKey(x => x.Name)
+                .PrimaryKey(x => x.Name, false)
                 .TableName($"[{schema}].Schedule")
                 .Columns(x =>
                 {
@@ -94,6 +94,23 @@ namespace Pulse.SqlStorage
                     x.Column(y => y.JobId);
                     x.Column(y => y.Name);
                     x.Column(y => y.Reason);
+                });
+            For<ServerEntity>()
+                .PrimaryKey(x => x.Id, false)
+                .TableName($"[{schema}].Server")
+                .Columns(x =>
+                {
+                    x.Column(y => y.Data);
+                    x.Column(y => y.Id);
+                    x.Column(y => y.LastHeartbeat);
+                });
+            For<WorkerEntity>()
+                .PrimaryKey(x => x.Id, false)
+                .TableName($"[{schema}].Worker")
+                .Columns(x =>
+                {
+                    x.Column(y => y.Server);
+                    x.Column(y => y.Id);
                 });
         }
     }

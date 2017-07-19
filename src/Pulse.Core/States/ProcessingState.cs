@@ -9,7 +9,7 @@ namespace Pulse.Core.States
 {
     public class ProcessingState : IState
     {
-        public static string DefaultName = "Processing";
+        public const string DefaultName = "Processing";
         public string Name => ProcessingState.DefaultName;
 
         public string Reason { get; set; }

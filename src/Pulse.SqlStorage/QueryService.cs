@@ -25,7 +25,7 @@ namespace Pulse.SqlStorage
             var fetchJobSqlTemplate = $@";
 update top (1) q
 set q.FetchedAt = GETUTCDATE(), q.WorkerId = @workerId
-output INSERTED.Id as QueueJobId, INSERTED.JobId, INSERTED.Queue, INSERTED.FetchedAt
+output INSERTED.Id as QueueJobId, INSERTED.JobId, INSERTED.Queue, INSERTED.FetchedAt, INSERTED.WorkerId
 from [{this._options.SchemaName}].Queue q
 where q.Queue IN (@queues) and q.WorkerId is null";
             var fetchedJob = db.Query<FetchedJob>(fetchJobSqlTemplate, new { queues = queues, workerId = workerId }).FirstOrDefault();
@@ -118,14 +118,17 @@ when not matched then insert(Id, Data, LastHeartbeat) values(Source.Id, Source.D
         }
         public int RemoveServer(string serverId, Database db)
         {
-            var sql = $@"; DELETE FROM [{this._options.SchemaName}].SERVER WHERE Id = @serverId";            
-             return db.Execute(sql, new { serverId = serverId });            
+            return db.Delete<ServerEntity>((object)serverId);           
         }
 
-        public int RegisterWorker(string workerId, string serverId, Database db)
+        public void RegisterWorker(string workerId, string serverId, Database db)
         {
-            var sql = $@"; INSERT INTO [{this._options.SchemaName}].Worker (Id, Server) VALUES(@workerId, @serverId);";            
-            return db.Execute(sql, new { workerId = workerId, serverId = serverId });           
+            var worker = new WorkerEntity()
+            {
+                Id = workerId,
+                Server = serverId
+            };
+            db.Insert<WorkerEntity>(worker);      
         }
 
         public ScheduleEntity LockFirstScheduledItem(Database db)
@@ -207,9 +210,9 @@ NOT EXISTS (SELECT * FROM [{this._options.SchemaName}].JobCondition jc WHERE jc.
     select * from [{this._options.SchemaName}].JobCondition where ParentJobId=@jobId
     union all
     select t.* from cte 
-        inner join JobCondition t on cte.JobId = t.ParentJobId
+        inner join [{this._options.SchemaName}].JobCondition jc on cte.JobId = jc.ParentJobId
 )
-SELECT * FROM Job j WHERE j.Id IN (SELECT JobId FROM cte)";
+SELECT * FROM [{this._options.SchemaName}].Job j WHERE j.Id IN (SELECT JobId FROM cte)";
             return db.Query<JobEntity>(sql, new { jobId = jobId }).ToList();
         }
     }

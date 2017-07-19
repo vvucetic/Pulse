@@ -10,7 +10,7 @@ namespace Pulse.Core.States
     public class EnqueuedState : IState
     {
         public const string DefaultQueue = "default";
-        public static string DefaultName = "Enqueued";
+        public const string DefaultName = "Enqueued";
         public string Name => EnqueuedState.DefaultName;
 
         public string Reason { get; set; }

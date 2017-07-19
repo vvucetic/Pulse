@@ -10,7 +10,7 @@ namespace Pulse.Core.States
 {
     public class SucceededState : IState
     {
-        public static string DefaultName = "Succeeded";
+        public const string DefaultName = "Succeeded";
         public string Name => SucceededState.DefaultName;
 
         public string Reason { get; set; }
