@@ -83,6 +83,7 @@ namespace Pulse.Core.Server.Processes
             {
                 //Succeeded
                 _storage.SetJobState(queueJob.JobId, resultState);
+                _storage.ExpireJob(queueJob.JobId);
                 _storage.EnqueueAwaitingWorkflowJobs(queueJob.JobId);
             }
             _storage.RemoveFromQueue(queueJob.QueueJobId);

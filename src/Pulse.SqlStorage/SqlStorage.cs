@@ -41,6 +41,8 @@ namespace Pulse.SqlStorage
             Initialize();
         }
 
+        #region Job operations
+        
         public override QueueJob FetchNextJob(string[] queues, string workerId)
         {
             using (var db = GetDatabase())
@@ -122,35 +124,26 @@ namespace Pulse.SqlStorage
             return jobId;
         }
 
-        public override void CreateAndEnqueueWorkflow(Workflow workflow)
+        public override void ExpireJob(int jobId)
+        {
+            using (var db = GetDatabase())
+            {
+                db.Update<JobEntity>(new JobEntity() { ExpireAt = DateTime.UtcNow.Add(_options.DefaultJobExpiration) }, t => t.ExpireAt);
+            }
+        }
+
+        public override void DeleteJob(int jobId)
         {
             using (var db = GetDatabase())
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    var rootJobs = workflow.GetRootJobs().ToDictionary(t => t.TempId, null);
-                    workflow.SaveWorkflow((workflowJob) => {
-                        return CreateAndEnqueueJob(
-                            queueJob: workflowJob.QueueJob,
-                            state: rootJobs.ContainsKey(workflowJob.TempId) ? 
-                                new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = "Automatically enqueued as part of workflow because not parent jobs to wait for."  } as IState
-                                : new AwaitingState() { Reason = "Waiting for other job/s to finish.",  CreatedAt = DateTime.UtcNow } as IState,
-                            db: db
-                            );
-                    });
-                    
-                    tran.Complete();
+                    var stateId = _queryService.InsertJobState(StateEntity.FromIState(new DeletedState(), jobId), db);
+                    _queryService.UpdateJob(new JobEntity() { Id = jobId, StateId = stateId, State = DeletedState.DefaultName, ExpireAt = DateTime.UtcNow.Add(_options.DefaultJobExpiration) }, t => new { t.State, t.StateId, t.ExpireAt }, db);
                 }
             }
         }
 
-        //public override void PersistJob(int jobId)
-        //{
-        //    using (var db = GetDatabase())
-        //    {
-        //        db.Update<JobEntity>(new JobEntity() { ExpireAt = null }, t => t.ExpireAt);
-        //    }
-        //}
 
         public override void SetJobState(int jobId, IState state)
         {
@@ -165,33 +158,6 @@ namespace Pulse.SqlStorage
             }
         }
         
-        //public override void InsertAndSetJobStates(int jobId, params IState[] states)
-        //{
-        //    using (var db = GetDatabase())
-        //    {
-        //        using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-        //        {                    
-        //            for (int i = 0; i < states.Length; i++)
-        //            {
-        //                var newState = StateEntity.FromIState(states[i], jobId);
-
-        //                if (i == states.Length - 1)
-        //                {
-        //                    //insert and set last state
-        //                    this._queryService.InsertJobState(newState, db);
-        //                    this._queryService.SetJobState(jobId, newState.Id, newState.Name, db);
-
-        //                }
-        //                {
-        //                    //insert state
-        //                    this._queryService.InsertJobState(newState, db);                            
-        //                }
-        //            }
-        //            tran.Complete();
-        //        }
-        //    }
-        //}
-
         public override void UpgradeFailedToScheduled(int jobId, IState failedState, IState scheduledState, DateTime nextRun, int retryCount)
         {
             using (var db = GetDatabase())
@@ -207,7 +173,11 @@ namespace Pulse.SqlStorage
                     tran.Complete();
                 }
             }
-        }        
+        }
+
+        #endregion
+
+        #region Queue operation
 
         public override void AddToQueue(int jobId, string queue)
         {
@@ -229,7 +199,7 @@ namespace Pulse.SqlStorage
         {
             using (var db = GetDatabase())
             {
-                this._queryService.UpdateQueue(new QueueEntity() { Id = queueJobId, FetchedAt = null, WorkerId = null }, t=>new { t.WorkerId, t.FetchedAt }, db);
+                this._queryService.UpdateQueue(new QueueEntity() { Id = queueJobId, FetchedAt = null, WorkerId = null }, t => new { t.WorkerId, t.FetchedAt }, db);
             }
         }
 
@@ -249,11 +219,15 @@ namespace Pulse.SqlStorage
                     }
                     else
                     {
-                        return false; 
+                        return false;
                     }
                 }
             }
         }
+
+        #endregion
+
+        #region Infrastructure operations
 
         public override void HeartbeatServer(string server, string data)
         {
@@ -262,6 +236,7 @@ namespace Pulse.SqlStorage
                 this._queryService.HeartbeatServer(server, data, db);
             }
         }
+
         public override void RemoveServer(string serverId)
         {
             using (var db = GetDatabase())
@@ -289,6 +264,21 @@ namespace Pulse.SqlStorage
                 return this._queryService.RemoveTimedOutServers(timeout, db);
             }
         }
+
+        public override void WriteOptionsToLog(ILog logger)
+        {
+            logger.Log("Using the following options for SQL Server job storage:");
+            logger.Log($"    Queue poll interval: {_options.QueuePollInterval}.");
+        }
+
+        public override IEnumerable<IBackgroundProcess> GetStorageProcesses()
+        {
+            yield return new ExpirationManager(this, _options.JobExpirationCheckInterval, _options.SchemaName);
+        }
+
+        #endregion
+
+        #region Recurring task operations
 
         public override bool EnqueueNextScheduledItem(Func<ScheduledTask, ScheduledTask> caluculateNext )
         {
@@ -383,6 +373,49 @@ namespace Pulse.SqlStorage
             }
         }
 
+        public override void TriggerScheduledJob(string name)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    var scheduleEntity = this._queryService.LockScheduledItem(name, db);
+                    if (scheduleEntity == null)
+                    {
+                        return;
+                    }
+                    var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued because scheduled job was triggered manually.", caluculateNext: null, db: db);
+                    tran.Complete();
+                    return;
+                }
+            }
+        }
+        #endregion
+
+        #region Workflow operations
+        
+        public override void CreateAndEnqueueWorkflow(Workflow workflow)
+        {
+            using (var db = GetDatabase())
+            {
+                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                {
+                    var rootJobs = workflow.GetRootJobs().ToDictionary(t => t.TempId, null);
+                    workflow.SaveWorkflow((workflowJob) => {
+                        return CreateAndEnqueueJob(
+                            queueJob: workflowJob.QueueJob,
+                            state: rootJobs.ContainsKey(workflowJob.TempId) ?
+                                new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = "Automatically enqueued as part of workflow because not parent jobs to wait for." } as IState
+                                : new AwaitingState() { Reason = "Waiting for other job/s to finish.", CreatedAt = DateTime.UtcNow } as IState,
+                            db: db
+                            );
+                    });
+
+                    tran.Complete();
+                }
+            }
+        }
+
         public override void EnqueueAwaitingWorkflowJobs(int finishedJobId)
         {
             using (var db = GetDatabase())
@@ -403,25 +436,7 @@ namespace Pulse.SqlStorage
                 }
             }
         }
-
-        public override void TriggerScheduledJob(string name)
-        {
-            using (var db = GetDatabase())
-            {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    var scheduleEntity = this._queryService.LockScheduledItem(name, db);
-                    if (scheduleEntity == null)
-                    {
-                        return;
-                    }
-                    var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued because scheduled job was triggered manually.", caluculateNext: null, db: db);
-                    tran.Complete();
-                    return;
-                }
-            }
-        }
-
+        
         public override void MarkConsequentlyFailedJobs(int failedJobId)
         {
             using (var db = GetDatabase())
@@ -439,6 +454,10 @@ namespace Pulse.SqlStorage
                 }
             }
         }
+
+        #endregion
+
+        #region Helpers
 
         private void Initialize()
         {
@@ -490,15 +509,7 @@ namespace Pulse.SqlStorage
         {
             return CustomDatabaseFactory.DbFactory.GetDatabase();
         }
-        public override void WriteOptionsToLog(ILog logger)
-        {
-            logger.Log("Using the following options for SQL Server job storage:");
-            logger.Log($"    Queue poll interval: {_options.QueuePollInterval}.");
-        }
+        #endregion
 
-        public override IEnumerable<IBackgroundProcess> GetStorageProcesses()
-        {
-            yield return new ExpirationManager(this, _options.JobExpirationCheckInterval, _options.SchemaName);
-        }
     }
 }

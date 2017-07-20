@@ -17,11 +17,12 @@ namespace Pulse.SqlStorage
             QueuePollInterval = TimeSpan.FromSeconds(15);
             InvisibilityTimeout = TimeSpan.FromMinutes(30);
             JobExpirationCheckInterval = TimeSpan.FromMinutes(30);
+            DefaultJobExpiration = TimeSpan.FromDays(1);
             PrepareSchemaIfNecessary = true;
             _schemaName = DefaultSchema;
         }
         
-
+        //TODO not used
         public TimeSpan QueuePollInterval
         {
             get { return _queuePollInterval; }
@@ -42,11 +43,20 @@ namespace Pulse.SqlStorage
             }
         }
 
+        //TODO not used
         public TimeSpan InvisibilityTimeout { get; set; }
         
         public bool PrepareSchemaIfNecessary { get; set; }
 
+        /// <summary>
+        /// Check interval for Expiration Manager
+        /// </summary>
         public TimeSpan JobExpirationCheckInterval { get; set; }
+
+        /// <summary>
+        /// Time to expire deleted or expired job
+        /// </summary>
+        public TimeSpan DefaultJobExpiration { get; set; }
 
         public string SchemaName
         {
