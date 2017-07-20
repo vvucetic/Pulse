@@ -94,7 +94,6 @@ SELECT [Id], [Queue] FROM @@Ids;";
 
         public int UpdateQueue(QueueEntity queueEntity, Expression<Func<QueueEntity, object>> fields, Database db)
         {
-            //TODO Rewrite with merge otherwise it wont work when successful and queue item is not there
             return db.Update<QueueEntity>(queueEntity, fields);
         }
 

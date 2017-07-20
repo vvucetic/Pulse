@@ -57,6 +57,7 @@
     <Compile Include="FetchedJob.cs" />
     <Compile Include="Entities\JobEntity.cs" />
     <Compile Include="IQueryService.cs" />
+    <Compile Include="Processes\ExpirationManager.cs" />
     <Compile Include="QueryService.cs" />
     <Compile Include="ScheduledJobInvocationData.cs" />
     <Compile Include="SqlServerObjectsInstaller.cs" />

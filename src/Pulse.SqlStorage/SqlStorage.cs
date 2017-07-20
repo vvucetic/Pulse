@@ -12,6 +12,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Pulse.Core.Log;
+using Pulse.Core.Server;
+using Pulse.SqlStorage.Processes;
 
 namespace Pulse.SqlStorage
 {
@@ -150,7 +152,7 @@ namespace Pulse.SqlStorage
         //    }
         //}
 
-        public override void InsertAndSetJobState(int jobId, IState state)
+        public override void SetJobState(int jobId, IState state)
         {
             using (var db = GetDatabase())
             {
@@ -163,40 +165,40 @@ namespace Pulse.SqlStorage
             }
         }
         
-        public override void InsertAndSetJobStates(int jobId, params IState[] states)
-        {
-            using (var db = GetDatabase())
-            {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {                    
-                    for (int i = 0; i < states.Length; i++)
-                    {
-                        var newState = StateEntity.FromIState(states[i], jobId);
+        //public override void InsertAndSetJobStates(int jobId, params IState[] states)
+        //{
+        //    using (var db = GetDatabase())
+        //    {
+        //        using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+        //        {                    
+        //            for (int i = 0; i < states.Length; i++)
+        //            {
+        //                var newState = StateEntity.FromIState(states[i], jobId);
 
-                        if (i == states.Length - 1)
-                        {
-                            //insert and set last state
-                            this._queryService.InsertJobState(newState, db);
-                            this._queryService.SetJobState(jobId, newState.Id, newState.Name, db);
+        //                if (i == states.Length - 1)
+        //                {
+        //                    //insert and set last state
+        //                    this._queryService.InsertJobState(newState, db);
+        //                    this._queryService.SetJobState(jobId, newState.Id, newState.Name, db);
 
-                        }
-                        {
-                            //insert state
-                            this._queryService.InsertJobState(newState, db);                            
-                        }
-                    }
-                    tran.Complete();
-                }
-            }
-        }
+        //                }
+        //                {
+        //                    //insert state
+        //                    this._queryService.InsertJobState(newState, db);                            
+        //                }
+        //            }
+        //            tran.Complete();
+        //        }
+        //    }
+        //}
 
-        public override void UpgradeStateToScheduled(int jobId, IState oldState, IState scheduledState, DateTime nextRun, int retryCount)
+        public override void UpgradeFailedToScheduled(int jobId, IState failedState, IState scheduledState, DateTime nextRun, int retryCount)
         {
             using (var db = GetDatabase())
             {
                 using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
                 {
-                    this._queryService.InsertJobState(StateEntity.FromIState(oldState, jobId), db);
+                    this._queryService.InsertJobState(StateEntity.FromIState(failedState, jobId), db);
                     var stateId = this._queryService.InsertJobState(StateEntity.FromIState(scheduledState, jobId), db);
                     this._queryService.UpdateJob(
                         new JobEntity { Id = jobId, NextRetry = nextRun, RetryCount = retryCount, StateId = stateId, State = scheduledState.Name }, 
@@ -484,7 +486,7 @@ namespace Pulse.SqlStorage
             //}
         }
 
-        private Database GetDatabase(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        internal Database GetDatabase(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
             return CustomDatabaseFactory.DbFactory.GetDatabase();
         }
@@ -492,6 +494,11 @@ namespace Pulse.SqlStorage
         {
             logger.Log("Using the following options for SQL Server job storage:");
             logger.Log($"    Queue poll interval: {_options.QueuePollInterval}.");
+        }
+
+        public override IEnumerable<IBackgroundProcess> GetStorageProcesses()
+        {
+            yield return new ExpirationManager(this, _options.JobExpirationCheckInterval, _options.SchemaName);
         }
     }
 }

@@ -22,5 +22,10 @@ namespace Pulse.Core.Server
         public TimeSpan ServerTimeout { get; set; }
         public string ServerName { get; set; }
         public ServerContext ServerContext { get; set; }
+
+        /// <summary>
+        /// Time worker waits if not jobs are fetched
+        /// </summary>
+        public TimeSpan WorkerFetchIdleSleep { get; set; }
     }
 }

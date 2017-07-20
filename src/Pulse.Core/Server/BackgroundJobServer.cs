@@ -46,6 +46,7 @@ namespace Pulse.Core.Server
             var processes = new List<IBackgroundProcess>();
             processes.AddRange(GetRequiredProcesses(processingServerOptions.ServerName));
             processes.AddRange(additionalProcesses);
+            processes.AddRange(storage.GetStorageProcesses());
 
             _logger.Log("Starting Pulse Server");
             _logger.Log($"Using job storage: '{storage}'");
@@ -91,7 +92,7 @@ namespace Pulse.Core.Server
 
             for (var i = 0; i < _options.WorkerCount; i++)
             {
-                processes.Add(new WorkerProcess(this._options.Queues, performer, this._storage, serverId));
+                processes.Add(new WorkerProcess(this._options.Queues, performer, this._storage, serverId, _options.WorkerFetchIdleSleep));
             }
 
             processes.Add(new DelayedJobSchedulerProcess(_options.SchedulePollingInterval, _storage));

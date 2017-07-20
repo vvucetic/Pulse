@@ -1,5 +1,6 @@
 ﻿using Pulse.Core.Common;
 using Pulse.Core.Log;
+using Pulse.Core.Server;
 using Pulse.Core.States;
 using System;
 using System.Collections.Generic;
@@ -49,9 +50,9 @@ namespace Pulse.Core.Storage
 
         public abstract int CreateAndEnqueueJob(QueueJob queueJob);
         public abstract void CreateAndEnqueueWorkflow(Workflow workflow);
-        public abstract void InsertAndSetJobState(int jobId, IState state);
-        public abstract void InsertAndSetJobStates(int jobId, params IState[] state);
-        public abstract void UpgradeStateToScheduled(int jobId, IState oldState, IState scheduledState, DateTime nextRun, int retryCount);
+        public abstract void SetJobState(int jobId, IState state);
+        //public abstract void InsertAndSetJobStates(int jobId, params IState[] state);
+        public abstract void UpgradeFailedToScheduled(int jobId, IState failedState, IState scheduledState, DateTime nextRun, int retryCount);
         public abstract void AddToQueue(int jobId, string queue);
         public abstract void RemoveFromQueue(int jobId);
         public abstract void Requeue(int queueJobId);
@@ -66,6 +67,7 @@ namespace Pulse.Core.Storage
         public abstract void TriggerScheduledJob(string name);
         public abstract void EnqueueAwaitingWorkflowJobs(int finishedJobId);
         public abstract void MarkConsequentlyFailedJobs(int failedJobId);
+        public abstract IEnumerable<IBackgroundProcess> GetStorageProcesses();
         public virtual void WriteOptionsToLog(ILog logger)
         {
 

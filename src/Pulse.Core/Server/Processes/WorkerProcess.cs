@@ -23,14 +23,18 @@ namespace Pulse.Core.Server.Processes
         private readonly IBackgroundJobPerformer _performer;
 
         private readonly DataStorage _storage;
-        
-        public WorkerProcess(string[] queues, IBackgroundJobPerformer performer, DataStorage storage, string serverId)
+
+        private readonly TimeSpan _workerFetchIdleSleep;
+
+
+        public WorkerProcess(string[] queues, IBackgroundJobPerformer performer, DataStorage storage, string serverId, TimeSpan workerFetchIdleSleep)
         {
             this._workerId = Guid.NewGuid().ToString();
             this._serverId = serverId ?? throw new ArgumentNullException(nameof(serverId));
             this._queues = queues ?? throw new ArgumentNullException(nameof(queues));
             this._performer = performer ?? throw new ArgumentNullException(nameof(performer));
             this._storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            this._workerFetchIdleSleep = workerFetchIdleSleep;
             RegisterWorker();
         }
 
@@ -40,10 +44,10 @@ namespace Pulse.Core.Server.Processes
             var queueJob = _storage.FetchNextJob(this._queues, this._workerId);
             if(queueJob==null)
             {
-                context.Wait(TimeSpan.FromSeconds(5));
+                context.Wait(_workerFetchIdleSleep);
                 return;
             }
-            _storage.InsertAndSetJobState(queueJob.JobId, new ProcessingState(context.ServerId, this._workerId));
+            _storage.SetJobState(queueJob.JobId, new ProcessingState(context.ServerId, this._workerId));
             var perfomContext = new PerformContext(context.CancellationToken, queueJob);
             var resultState = PerformJob(perfomContext);
             if(resultState is FailedState)
@@ -62,12 +66,12 @@ namespace Pulse.Core.Server.Processes
                     {
                         Reason = $"Retry attempt { queueJob.RetryCount } of { queueJob.MaxRetries }: { exceptionMessage}"
                     };
-                    _storage.UpgradeStateToScheduled(queueJob.JobId, resultState, scheduledState, nextRun, queueJob.RetryCount + 1);
+                    _storage.UpgradeFailedToScheduled(queueJob.JobId, resultState, scheduledState, nextRun, queueJob.RetryCount + 1);
                 }
                 else
                 {
                     //final failed state
-                    _storage.InsertAndSetJobState(queueJob.JobId, resultState);
+                    _storage.SetJobState(queueJob.JobId, resultState);
                     if(queueJob.WorkflowId.HasValue)
                     {
                         //mark dependent jobs consequently failed
@@ -78,7 +82,7 @@ namespace Pulse.Core.Server.Processes
             else
             {
                 //Succeeded
-                _storage.InsertAndSetJobState(queueJob.JobId, resultState);
+                _storage.SetJobState(queueJob.JobId, resultState);
                 _storage.EnqueueAwaitingWorkflowJobs(queueJob.JobId);
             }
             _storage.RemoveFromQueue(queueJob.QueueJobId);

@@ -25,7 +25,7 @@ namespace Pulse.Core.Server
             HeartbeatInterval = ServerHeartbeatProcess.DefaultHeartbeatInterval;
             ServerTimeout = ServerWatchdogProcess.DefaultServerTimeout;
             ServerCheckInterval = ServerWatchdogProcess.DefaultCheckInterval;
-            
+            WorkerFetchIdleSleep = TimeSpan.FromSeconds(5);
             Activator = null;
         }
 
@@ -59,7 +59,12 @@ namespace Pulse.Core.Server
         public TimeSpan HeartbeatInterval { get; set; }
         public TimeSpan ServerTimeout { get; set; }
         public TimeSpan ServerCheckInterval { get; set; }
-        
+
+        /// <summary>
+        /// Time worker waits if not jobs are fetched. Default is 5 seconds.
+        /// </summary>
+        public TimeSpan WorkerFetchIdleSleep { get; set; }
+
         public JobActivator Activator { get; set; }
     }
 }

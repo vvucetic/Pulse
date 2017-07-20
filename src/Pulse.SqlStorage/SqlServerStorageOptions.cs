@@ -11,7 +11,6 @@ namespace Pulse.SqlStorage
         public static readonly string DefaultSchema = "Pulse";
         private TimeSpan _queuePollInterval;
         private string _schemaName;
-        private TimeSpan? _slidingInvisibilityTimeout;
 
         public SqlServerStorageOptions()
         {
