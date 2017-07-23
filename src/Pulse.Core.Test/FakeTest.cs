@@ -188,8 +188,9 @@ namespace Pulse.Core.Test
         [TestMethod]
         public void TestSerialization()
         {
-            var rootJob = WorkflowJob.MakeJob(() => RecurringMethod("1 task", 1));
-            var test = JobHelper.ToJson(rootJob.QueueJob);
+            //var rootJob = WorkflowJob.MakeJob(() => RecurringMethod("1 task", 1));
+            //var test = JobHelper.ToJson(rootJob.QueueJob);
+
         }
     }
 }

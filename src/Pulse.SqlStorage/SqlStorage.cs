@@ -59,8 +59,8 @@ namespace Pulse.SqlStorage
 
                     var invocationData = JobHelper.FromJson<InvocationData>(jobEntity.InvocationData);
                     var nextJobs = JobHelper.FromJson<List<int>>(jobEntity.NextJobs);
-                    tran.Complete();
-                    return new QueueJob()
+                    
+                    var result = new QueueJob()
                     {
                         JobId = jobEntity.Id,
                         QueueJobId = fetchedJob.QueueJobId,
@@ -79,6 +79,8 @@ namespace Pulse.SqlStorage
                         ScheduleName = jobEntity.ScheduleName,
                         Description = jobEntity.Description
                     };
+                    tran.Complete();
+                    return result;
                 }
             }
         }
