@@ -1,4 +1,5 @@
 ﻿using Pulse.Core.Common;
+using Pulse.Core.Events;
 using Pulse.Core.Exceptions;
 using Pulse.Core.States;
 using Pulse.Core.Storage;
@@ -26,6 +27,7 @@ namespace Pulse.Core.Server.Processes
 
         private readonly TimeSpan _workerFetchIdleSleep;
 
+        private readonly EventManager _eventManager = new EventManager();
 
         public WorkerProcess(string[] queues, IBackgroundJobPerformer performer, DataStorage storage, string serverId, TimeSpan workerFetchIdleSleep)
         {
@@ -48,6 +50,7 @@ namespace Pulse.Core.Server.Processes
                 return;
             }
             _storage.SetJobState(queueJob.JobId, new ProcessingState(context.ServerId, this._workerId));
+            _eventManager.RaiseOnProcessing(queueJob, context.ServerId, this._workerId);
             var perfomContext = new PerformContext(context.CancellationToken, queueJob);
             var resultState = PerformJob(perfomContext);
             if(resultState is FailedState)
@@ -67,12 +70,15 @@ namespace Pulse.Core.Server.Processes
                         Reason = $"Retry attempt { queueJob.RetryCount } of { queueJob.MaxRetries }: { exceptionMessage}"
                     };
                     _storage.UpgradeFailedToScheduled(queueJob.JobId, resultState, scheduledState, nextRun, queueJob.RetryCount + 1);
+                    _eventManager.RaiseOnReschedule(queueJob, context.ServerId, this._workerId, failedState.Exception, nextRun);
                 }
                 else
                 {
                     //final failed state
                     _storage.SetJobState(queueJob.JobId, resultState);
-                    if(queueJob.WorkflowId.HasValue)
+                    _eventManager.RaiseOnFail(queueJob, context.ServerId, this._workerId, failedState.Exception);
+
+                    if (queueJob.WorkflowId.HasValue)
                     {
                         //mark dependent jobs consequently failed
                         _storage.MarkConsequentlyFailedJobs(queueJob.JobId);
@@ -85,6 +91,7 @@ namespace Pulse.Core.Server.Processes
                 _storage.SetJobState(queueJob.JobId, resultState);
                 _storage.ExpireJob(queueJob.JobId);
                 _storage.EnqueueAwaitingWorkflowJobs(queueJob.JobId);
+                _eventManager.RaiseOnSuccess(queueJob, context.ServerId, this._workerId);
             }
             _storage.RemoveFromQueue(queueJob.QueueJobId);
         }

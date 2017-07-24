@@ -76,6 +76,9 @@
     <Compile Include="Common\ScheduledJob.cs" />
     <Compile Include="Common\TypeExtensions.cs" />
     <Compile Include="Common\Workflow.cs" />
+    <Compile Include="Events\EventManager.cs" />
+    <Compile Include="Events\EventSubscriber.cs" />
+    <Compile Include="Events\EventSubscriberProvider.cs" />
     <Compile Include="Exceptions\InternalErrorException.cs" />
     <Compile Include="Exceptions\JobPerformanceException.cs" />
     <Compile Include="GlobalConfiguration.cs" />
