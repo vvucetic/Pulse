@@ -142,6 +142,7 @@ namespace Pulse.SqlStorage
                 {
                     var stateId = _queryService.InsertJobState(StateEntity.FromIState(new DeletedState(), jobId), db);
                     _queryService.UpdateJob(new JobEntity() { Id = jobId, StateId = stateId, State = DeletedState.DefaultName, ExpireAt = DateTime.UtcNow.Add(_options.DefaultJobExpiration) }, t => new { t.State, t.StateId, t.ExpireAt }, db);
+                    tran.Complete();
                 }
             }
         }
