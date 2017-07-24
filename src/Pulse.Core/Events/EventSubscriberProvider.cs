@@ -10,7 +10,7 @@ namespace Pulse.Core.Events
     {
         private static EventSubscriber _currentSubscriber = new EventSubscriber();
 
-        public static void SetCurrentLogger(EventSubscriber subscriber)
+        public static void SetCurrentSubscriber(EventSubscriber subscriber)
         {
             _currentSubscriber = subscriber ?? throw new ArgumentNullException(nameof(subscriber));
         }
