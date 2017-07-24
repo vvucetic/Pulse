@@ -11,9 +11,7 @@ namespace Pulse.Core.Common
     public class Workflow
     {
         public string Name { get; set; }
-
-        public Guid? ContextId { get; set; }
-
+        
         public Guid WorkflowId { get; } = Guid.NewGuid();
 
         public readonly WorkflowJob RootWorkflowJob;
@@ -21,26 +19,22 @@ namespace Pulse.Core.Common
         public readonly WorkflowJobGroup RootWorkflowJobGroup;
 
 
-        public Workflow(WorkflowJob workflowJob, Guid? contextId = null)
+        public Workflow(WorkflowJob workflowJob)
         {
-            this.ContextId = contextId;
             this.RootWorkflowJob = workflowJob;
 
             GetAllJobs().ForEach(t =>
             {
-                t.QueueJob.ContextId = this.ContextId;
                 t.QueueJob.WorkflowId = this.WorkflowId;
             });
         }
 
-        public Workflow(WorkflowJobGroup wfGroup, Guid? contextId = null)
+        public Workflow(WorkflowJobGroup wfGroup)
         {
-            this.ContextId = contextId;
             this.RootWorkflowJobGroup = wfGroup;
 
             GetAllJobs().ForEach(t => 
             {
-                t.QueueJob.ContextId = this.ContextId;
                 t.QueueJob.WorkflowId = this.WorkflowId;
             });            
         }
@@ -62,7 +56,6 @@ namespace Pulse.Core.Common
             }
             GetAllJobs().ForEach(t =>
             {
-                t.QueueJob.ContextId = this.ContextId;
                 t.QueueJob.WorkflowId = this.WorkflowId;
             });
         }

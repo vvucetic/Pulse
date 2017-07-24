@@ -28,7 +28,7 @@ namespace Pulse.Core.Common
 
         public int MaxRetries { get; set; } = 10;
 
-        public int RetryCount { get; set; }
+        public int RetryCount { get; set; } = 1;
 
         public DateTime? NextRetry { get; set; }
 

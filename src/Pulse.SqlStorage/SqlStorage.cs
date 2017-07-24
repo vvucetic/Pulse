@@ -103,7 +103,7 @@ namespace Pulse.SqlStorage
         {
             var insertedJob = JobEntity.FromQueueJob(queueJob);
             insertedJob.CreatedAt = DateTime.UtcNow;
-            insertedJob.RetryCount = 0;
+            insertedJob.RetryCount = 1;
             var jobId = this._queryService.InsertJob(insertedJob, db);
             var stateId = this._queryService.InsertJobState(
                 StateEntity.FromIState(state,
