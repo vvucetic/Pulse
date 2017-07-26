@@ -1,5 +1,6 @@
 ﻿using Pulse.Core.Common;
 using Pulse.Core.Log;
+using Pulse.Core.Monitoring;
 using Pulse.Core.Server;
 using Pulse.Core.States;
 using System;
@@ -79,6 +80,10 @@ namespace Pulse.Core.Storage
 
         public abstract void EnqueueAwaitingWorkflowJobs(int finishedJobId);
         public abstract void MarkConsequentlyFailedJobs(int failedJobId);
+
+        //Monitoring API
+
+        public abstract IMonitoringApi GetMonitoringApi();
 
     }
 }

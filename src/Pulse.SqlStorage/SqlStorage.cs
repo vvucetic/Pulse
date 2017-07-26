@@ -14,13 +14,14 @@ using System.Threading.Tasks;
 using Pulse.Core.Log;
 using Pulse.Core.Server;
 using Pulse.SqlStorage.Processes;
+using Pulse.Core.Monitoring;
 
 namespace Pulse.SqlStorage
 {
     public class SqlStorage : DataStorage
     {
         private readonly string _connectionStringName;
-        private readonly SqlServerStorageOptions _options;
+        internal readonly SqlServerStorageOptions _options;
         private readonly IQueryService _queryService;
         
         public SqlStorage(string connectionStringName) : this(connectionStringName, new SqlServerStorageOptions())
@@ -77,7 +78,9 @@ namespace Pulse.SqlStorage
                         WorkerId = fetchedJob.WorkerId,
                         WorkflowId = jobEntity.WorkflowId,
                         ScheduleName = jobEntity.ScheduleName,
-                        Description = jobEntity.Description
+                        Description = jobEntity.Description,
+                        State = jobEntity.State,
+                        StateId = jobEntity.StateId
                     };
                     tran.Complete();
                     return result;
@@ -459,6 +462,11 @@ namespace Pulse.SqlStorage
         }
 
         #endregion
+
+        public override IMonitoringApi GetMonitoringApi()
+        {
+            return new SqlStorageMonitoringApi(this);
+        }
 
         #region Helpers
 

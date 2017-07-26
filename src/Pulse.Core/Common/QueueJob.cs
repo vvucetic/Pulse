@@ -14,6 +14,10 @@ namespace Pulse.Core.Common
 
         public string QueueName { get; set; }
 
+        public string State { get; set; }
+
+        public int? StateId { get; set; }
+
         public List<int> NextJobs { get; set; } = new List<int>();
 
         public Guid? ContextId { get; set; }

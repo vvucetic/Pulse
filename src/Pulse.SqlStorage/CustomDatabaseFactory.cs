@@ -20,7 +20,7 @@ namespace Pulse.SqlStorage
             
             DbFactory = DatabaseFactory.Config(x =>
             {
-                x.UsingDatabase(() => new Database(connectionString, "System.Data.SqlClient"));
+                x.UsingDatabase(() => new Database(connectionString, "System.Data.SqlClient", System.Data.IsolationLevel.ReadCommitted));
                 x.WithFluentConfig(fluentConfig);
             });
         }

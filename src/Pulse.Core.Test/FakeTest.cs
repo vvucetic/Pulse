@@ -9,8 +9,8 @@ using Pulse.Core.Server;
 
 namespace Pulse.Core.Test
 {
-    [Ignore]
-    //[TestClass]
+    
+    [TestClass]
     public class FakeTest
     {
         [TestMethod]
@@ -191,6 +191,14 @@ namespace Pulse.Core.Test
             //var rootJob = WorkflowJob.MakeJob(() => RecurringMethod("1 task", 1));
             //var test = JobHelper.ToJson(rootJob.QueueJob);
 
+        }
+
+        [TestMethod]
+        public void MonitoringApi()
+        {
+            var sqlStorage = new SqlStorage.SqlStorage("db", new SqlServerStorageOptions { });
+            var monitoringApi = sqlStorage.GetMonitoringApi();
+            var jobs = monitoringApi.GetFailedJobs(0, 100);
         }
     }
 }
