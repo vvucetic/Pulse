@@ -1,4 +1,4 @@
-﻿using NPoco;
+﻿using Dapper.Contrib.Extensions;
 using Pulse.Core.Common;
 using System;
 using System.Collections.Generic;
@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 
 namespace Pulse.SqlStorage.Entities
 {
-    [TableName("Job")]
-    [PrimaryKey("Id", AutoIncrement = true)]
     public class JobEntity
     {
         public JobEntity()
@@ -17,6 +15,7 @@ namespace Pulse.SqlStorage.Entities
             this.MaxRetries = 10;
             this.RetryCount = 1;
         }
+        [Key]
         public int Id { get; set; }
         
         public string State { get; set; }

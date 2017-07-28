@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Pulse.Core.Monitoring.DataModel;
-using NPoco;
 using Pulse.SqlStorage.Entities;
 using Pulse.Core.Common;
 using Pulse.Core.Storage;
 using Pulse.Core.States;
+using Dapper;
 
 namespace Pulse.SqlStorage
 {
@@ -33,7 +33,7 @@ namespace Pulse.SqlStorage
                         ? (long?)long.Parse(stateData["PerformanceDuration"]) + (long?)long.Parse(stateData["Latency"])
                         : null
                 };
-            });            
+            });
         }
 
         public List<FailedJobDto> GetFailedJobs(int from, int count)
@@ -189,11 +189,11 @@ left join[{_storage._options.SchemaName}].State s with(nolock) on j.StateId = s.
 where cte.row_num between @start and @end
 order by j.Id desc
 ";
-            using (var db = _storage.GetDatabase())
+            return _storage.UseConnection((conn) =>
             {
-                return db.Query<TempJob>(sql, new { stateName = stateName, start = @from + 1, end = @from + count })
+                return conn.Query<TempJob>(sql, new { stateName = stateName, start = @from + 1, end = @from + count })
                     .ToList()
-                    .Select(t=> map(
+                    .Select(t => map(
                         new JobDto()
                         {
                             ContextId = t.ContextId,
@@ -206,11 +206,12 @@ order by j.Id desc
                             StateId = t.StateId,
                             WorkflowId = t.WorkflowId,
                             StateReason = t.StateReason
-                        }, 
+                        },
                         ParseStateData(t.StateData)))
                     .ToList();
-            }
+            });
         }
+    
 
         private Dictionary<string, string> ParseStateData(string data)
         {

@@ -1,4 +1,4 @@
-﻿using NPoco;
+﻿using Dapper.Contrib.Extensions;
 using Pulse.Core.Common;
 using Pulse.Core.Storage;
 using System;
@@ -9,10 +9,9 @@ using System.Threading.Tasks;
 
 namespace Pulse.SqlStorage.Entities
 {
-    [TableName("Schedule")]
-    [PrimaryKey("Name", AutoIncrement = false)]
     public class ScheduleEntity
     {
+        [ExplicitKey]
         public string Name { get; set; }
 
         public string Cron { get; set; }

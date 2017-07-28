@@ -73,7 +73,7 @@ namespace Pulse.Core.Storage
 
         public abstract bool EnqueueNextScheduledItem(Func<ScheduledTask, ScheduledTask> caluculateNext);
         public abstract int CreateOrUpdateRecurringTask(ScheduledTask job);
-        public abstract int RemoveScheduledItem(string name);
+        public abstract bool RemoveScheduledItem(string name);
         public abstract void TriggerScheduledJob(string name);
 
         //Workflow operations

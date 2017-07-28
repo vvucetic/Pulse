@@ -1,4 +1,4 @@
-﻿using NPoco;
+﻿using Dapper.Contrib.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,10 +7,9 @@ using System.Threading.Tasks;
 
 namespace Pulse.SqlStorage.Entities
 {
-    [TableName("Queue")]
-    [PrimaryKey(new[] { "Id" }, AutoIncrement = true)]
     public class QueueEntity
     {
+        [Key]
         public int Id { get; set; }
 
         public int JobId { get; set; }

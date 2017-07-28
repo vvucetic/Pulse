@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Dapper;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -73,14 +74,14 @@ namespace Pulse.SqlStorage.Tests.Utils
                 @"if db_id('{0}') is null create database [{0}] COLLATE SQL_Latin1_General_CP1_CS_AS",
                 ConnectionUtils.GetDatabaseName());
 
-            using (var db = ConnectionUtils.GetMasterDatabaseConnection())
-            {               
-                db.Execute(recreateDatabaseSql);
+            using (var conn = ConnectionUtils.GetMasterConnection())
+            {
+                conn.Execute(recreateDatabaseSql);
             }
 
-            using (var db = ConnectionUtils.GetDatabaseConnection())
+            using (var conn = ConnectionUtils.GetDatabaseConnection())
             {
-                SqlServerObjectsInstaller.Install(db, schema);
+                SqlServerObjectsInstaller.Install(conn, schema);
             }
         }
     }

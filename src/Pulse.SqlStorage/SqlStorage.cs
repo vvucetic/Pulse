@@ -1,5 +1,4 @@
-﻿using NPoco;
-using Pulse.Core.Common;
+﻿using Pulse.Core.Common;
 using Pulse.Core.Exceptions;
 using Pulse.Core.States;
 using Pulse.Core.Storage;
@@ -7,7 +6,6 @@ using Pulse.SqlStorage.Entities;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +13,10 @@ using Pulse.Core.Log;
 using Pulse.Core.Server;
 using Pulse.SqlStorage.Processes;
 using Pulse.Core.Monitoring;
+using System.Data.Common;
+using System.Data.SqlClient;
+using System.Transactions;
+using Dapper.Contrib.Extensions;
 
 namespace Pulse.SqlStorage
 {
@@ -23,7 +25,7 @@ namespace Pulse.SqlStorage
         private readonly string _connectionStringName;
         internal readonly SqlServerStorageOptions _options;
         private readonly IQueryService _queryService;
-        
+
         public SqlStorage(string connectionStringName) : this(connectionStringName, new SqlServerStorageOptions())
         {
         }
@@ -38,84 +40,81 @@ namespace Pulse.SqlStorage
             this._connectionStringName = connectionStringName ?? throw new ArgumentNullException(nameof(connectionStringName));
             this._options = options ?? throw new ArgumentNullException(nameof(options));
             this._queryService = queryService ?? throw new ArgumentNullException(nameof(queryService));
-            CustomDatabaseFactory.Setup(options.SchemaName, GetConnectionString(connectionStringName));
             Initialize();
         }
 
+        internal int? CommandTimeout => _options.CommandTimeout.HasValue ? (int)_options.CommandTimeout.Value.TotalSeconds : (int?)null;
+
         #region Job operations
-        
+
         public override QueueJob FetchNextJob(string[] queues, string workerId)
         {
-            using (var db = GetDatabase())
+            return UseTransaction<QueueJob>((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                var fetchedJob = this._queryService.FetchNextJob(queues, workerId, conn, tran);
+                if (fetchedJob == null)
+                    return null;
+
+                var jobEntity = this._queryService.GetJob(fetchedJob.JobId, conn);
+                if (jobEntity == null)
+                    throw new InternalErrorException("Job not found after fetched from queue.");
+
+                var invocationData = JobHelper.FromJson<InvocationData>(jobEntity.InvocationData);
+                var nextJobs = JobHelper.FromJson<List<int>>(jobEntity.NextJobs);
+
+                var result = new QueueJob()
                 {
-                    var fetchedJob = this._queryService.FetchNextJob(queues, workerId, db);
-                    if (fetchedJob == null)
-                        return null;
-
-                    var jobEntity = this._queryService.GetJob(fetchedJob.JobId, db);
-                    if (jobEntity == null)
-                        throw new InternalErrorException("Job not found after fetched from queue.");
-
-                    var invocationData = JobHelper.FromJson<InvocationData>(jobEntity.InvocationData);
-                    var nextJobs = JobHelper.FromJson<List<int>>(jobEntity.NextJobs);
-                    
-                    var result = new QueueJob()
-                    {
-                        JobId = jobEntity.Id,
-                        QueueJobId = fetchedJob.QueueJobId,
-                        QueueName = fetchedJob.Queue,
-                        Job = invocationData.Deserialize(),
-                        ContextId = jobEntity.ContextId,
-                        NextJobs = nextJobs,
-                        FetchedAt = fetchedJob.FetchedAt,
-                        CreatedAt = jobEntity.CreatedAt,
-                        ExpireAt = jobEntity.ExpireAt,
-                        MaxRetries = jobEntity.MaxRetries,
-                        NextRetry = jobEntity.NextRetry,
-                        RetryCount = jobEntity.RetryCount,
-                        WorkerId = fetchedJob.WorkerId,
-                        WorkflowId = jobEntity.WorkflowId,
-                        ScheduleName = jobEntity.ScheduleName,
-                        Description = jobEntity.Description,
-                        State = jobEntity.State,
-                        StateId = jobEntity.StateId
-                    };
-                    tran.Complete();
-                    return result;
-                }
-            }
+                    JobId = jobEntity.Id,
+                    QueueJobId = fetchedJob.QueueJobId,
+                    QueueName = fetchedJob.Queue,
+                    Job = invocationData.Deserialize(),
+                    ContextId = jobEntity.ContextId,
+                    NextJobs = nextJobs,
+                    FetchedAt = fetchedJob.FetchedAt,
+                    CreatedAt = jobEntity.CreatedAt,
+                    ExpireAt = jobEntity.ExpireAt,
+                    MaxRetries = jobEntity.MaxRetries,
+                    NextRetry = jobEntity.NextRetry,
+                    RetryCount = jobEntity.RetryCount,
+                    WorkerId = fetchedJob.WorkerId,
+                    WorkflowId = jobEntity.WorkflowId,
+                    ScheduleName = jobEntity.ScheduleName,
+                    Description = jobEntity.Description,
+                    State = jobEntity.State,
+                    StateId = jobEntity.StateId
+                };
+                tran.Commit();
+                return result;
+            });
+            
         }
 
         public override int CreateAndEnqueueJob(QueueJob queueJob)
         {
-            using (var db = GetDatabase())
+            return UseTransaction<int>((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    var state = new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = queueJob.QueueName, Reason = "Job enqueued" };
-                    var jobId = CreateAndEnqueueJob(queueJob, state, db);                    
-                    tran.Complete();
-                    return jobId;
-                }
-            }
+                var state = new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = queueJob.QueueName, Reason = "Job enqueued" };
+                var jobId = CreateAndEnqueueJob(queueJob, state, conn);
+                tran.Commit();
+                return jobId;
+            });
+            
         }
 
-        private int CreateAndEnqueueJob(QueueJob queueJob, IState state, Database db)
+        private int CreateAndEnqueueJob(QueueJob queueJob, IState state, DbConnection connection)
         {
             var insertedJob = JobEntity.FromQueueJob(queueJob);
             insertedJob.CreatedAt = DateTime.UtcNow;
             insertedJob.RetryCount = 1;
-            var jobId = this._queryService.InsertJob(insertedJob, db);
+            var jobId = this._queryService.InsertJob(insertedJob, connection);
             var stateId = this._queryService.InsertJobState(
                 StateEntity.FromIState(state,
                 insertedJob.Id),
-                db);
-            this._queryService.SetJobState(jobId, stateId, state.Name, db);
+                connection);
+            this._queryService.SetJobState(jobId, stateId, state.Name, connection);
             if (state is EnqueuedState)
             {
-                this._queryService.InsertJobToQueue(jobId, queueJob.QueueName, db);
+                this._queryService.InsertJobToQueue(jobId, queueJob.QueueName, connection);
             }
             foreach (var nextJob in queueJob.NextJobs)
             {
@@ -124,61 +123,52 @@ namespace Pulse.SqlStorage
                     Finished = false,
                     JobId = nextJob,
                     ParentJobId = jobId
-                }, db);
+                }, connection);
             }
             return jobId;
         }
 
         public override void ExpireJob(int jobId)
         {
-            using (var db = GetDatabase())
+            UseConnection(connection =>
             {
-                db.Update<JobEntity>(new JobEntity() { ExpireAt = DateTime.UtcNow.Add(_options.DefaultJobExpiration) }, t => t.ExpireAt);
-            }
+                connection.Update<JobEntity>(new JobEntity() { ExpireAt = DateTime.UtcNow.Add(_options.DefaultJobExpiration) }, t => new { t.ExpireAt });
+            });
         }
 
         public override void DeleteJob(int jobId)
         {
-            using (var db = GetDatabase())
+            UseTransaction((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    var stateId = _queryService.InsertJobState(StateEntity.FromIState(new DeletedState(), jobId), db);
-                    _queryService.UpdateJob(new JobEntity() { Id = jobId, StateId = stateId, State = DeletedState.DefaultName, ExpireAt = DateTime.UtcNow.Add(_options.DefaultJobExpiration) }, t => new { t.State, t.StateId, t.ExpireAt }, db);
-                    tran.Complete();
-                }
-            }
+                var stateId = _queryService.InsertJobState(StateEntity.FromIState(new DeletedState(), jobId), conn);
+                _queryService.UpdateJob(new JobEntity() { Id = jobId, StateId = stateId, State = DeletedState.DefaultName, ExpireAt = DateTime.UtcNow.Add(_options.DefaultJobExpiration) }, t => new { t.State, t.StateId, t.ExpireAt }, conn);
+                tran.Commit();
+            });            
         }
 
 
         public override void SetJobState(int jobId, IState state)
         {
-            using (var db = GetDatabase())
+            UseTransaction((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    var stateId = this._queryService.InsertJobState(StateEntity.FromIState(state, jobId), db);
-                    this._queryService.SetJobState(jobId, stateId, state.Name, db);
-                    tran.Complete();
-                }
-            }
+                var stateId = this._queryService.InsertJobState(StateEntity.FromIState(state, jobId), conn);
+                this._queryService.SetJobState(jobId, stateId, state.Name, conn);
+                tran.Commit();
+            });            
         }
         
         public override void UpgradeFailedToScheduled(int jobId, IState failedState, IState scheduledState, DateTime nextRun, int retryCount)
         {
-            using (var db = GetDatabase())
+            UseTransaction((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    this._queryService.InsertJobState(StateEntity.FromIState(failedState, jobId), db);
-                    var stateId = this._queryService.InsertJobState(StateEntity.FromIState(scheduledState, jobId), db);
-                    this._queryService.UpdateJob(
-                        new JobEntity { Id = jobId, NextRetry = nextRun, RetryCount = retryCount, StateId = stateId, State = scheduledState.Name }, 
-                        t => new { t.RetryCount, t.NextRetry, t.State, t.StateId },
-                        db);
-                    tran.Complete();
-                }
-            }
+                this._queryService.InsertJobState(StateEntity.FromIState(failedState, jobId), conn);
+                var stateId = this._queryService.InsertJobState(StateEntity.FromIState(scheduledState, jobId), conn);
+                this._queryService.UpdateJob(
+                    new JobEntity { Id = jobId, NextRetry = nextRun, RetryCount = retryCount, StateId = stateId, State = scheduledState.Name },
+                    t => new { t.RetryCount, t.NextRetry, t.State, t.StateId },
+                    conn);
+                tran.Commit();
+            });
         }
 
         #endregion
@@ -187,48 +177,45 @@ namespace Pulse.SqlStorage
 
         public override void AddToQueue(int jobId, string queue)
         {
-            using (var db = GetDatabase())
+            UseConnection(connection =>
             {
-                this._queryService.InsertJobToQueue(jobId, queue, db);
-            }
+                this._queryService.InsertJobToQueue(jobId, queue, connection);
+            });
         }
 
         public override void RemoveFromQueue(int queueJobId)
         {
-            using (var db = GetDatabase())
+            UseConnection(connection =>
             {
-                this._queryService.RemoveFromQueue(queueJobId, db);
-            }
+                this._queryService.RemoveFromQueue(queueJobId, connection);
+            });
         }
 
         public override void Requeue(int queueJobId)
         {
-            using (var db = GetDatabase())
+            UseConnection(connection =>
             {
-                this._queryService.UpdateQueue(new QueueEntity() { Id = queueJobId, FetchedAt = null, WorkerId = null }, t => new { t.WorkerId, t.FetchedAt }, db);
-            }
+                this._queryService.UpdateQueue(new QueueEntity() { Id = queueJobId, FetchedAt = null, WorkerId = null }, t => new { t.WorkerId, t.FetchedAt }, connection);
+            });
         }
 
         public override bool EnqueueNextDelayedJob()
         {
-            using (var db = GetDatabase())
+            return UseTransaction<bool>((conn, tran) =>
             {
-                using (var tran = db.GetTransaction())
+                var job = this._queryService.EnqueueNextDelayedJob(conn);
+                if (job != null)
                 {
-                    var job = this._queryService.EnqueueNextDelayedJob(db);
-                    if (job != null)
-                    {
-                        var stateId = this._queryService.InsertJobState(StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = job.Queue, Reason = "Enqueued by DelayedJobScheduler" }, job.JobId), db);
-                        this._queryService.SetJobState(job.JobId, stateId, EnqueuedState.DefaultName, db);
-                        tran.Complete();
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
+                    var stateId = this._queryService.InsertJobState(StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = job.Queue, Reason = "Enqueued by DelayedJobScheduler" }, job.JobId), conn);
+                    this._queryService.SetJobState(job.JobId, stateId, EnqueuedState.DefaultName, conn);
+                    tran.Commit();
+                    return true;
                 }
-            }
+                else
+                {
+                    return false;
+                }
+            });
         }
 
         #endregion
@@ -237,26 +224,26 @@ namespace Pulse.SqlStorage
 
         public override void HeartbeatServer(string server, string data)
         {
-            using (var db = GetDatabase())
+            UseConnection(connection =>
             {
-                this._queryService.HeartbeatServer(server, data, db);
-            }
+                this._queryService.HeartbeatServer(server, data, connection);
+            });
         }
 
         public override void RemoveServer(string serverId)
         {
-            using (var db = GetDatabase())
+            UseConnection(connection =>
             {
-                this._queryService.RemoveServer(serverId, db);
-            }
+                this._queryService.RemoveServer(serverId, connection);
+            });
         }
 
         public override void RegisterWorker(string workerId, string serverId)
         {
-            using (var db = GetDatabase())
+            UseConnection(connection =>
             {
-                this._queryService.RegisterWorker(workerId, serverId, db);
-            }
+                this._queryService.RegisterWorker(workerId, serverId, connection);
+            });
         }
 
         public override int RemoveTimedOutServers(TimeSpan timeout)
@@ -265,10 +252,11 @@ namespace Pulse.SqlStorage
             {
                 throw new ArgumentException("The `timeout` value must be positive.", nameof(timeout));
             }
-            using (var db = GetDatabase())
+            return UseConnection<int>(connection =>
             {
-                return this._queryService.RemoveTimedOutServers(timeout, db);
-            }
+                return this._queryService.RemoveTimedOutServers(timeout, connection);
+            });
+                
         }
 
         public override void WriteOptionsToLog(ILog logger)
@@ -288,23 +276,20 @@ namespace Pulse.SqlStorage
 
         public override bool EnqueueNextScheduledItem(Func<ScheduledTask, ScheduledTask> caluculateNext )
         {
-            using (var db = GetDatabase())
+            return UseTransaction<bool>((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                var scheduleEntity = this._queryService.LockFirstScheduledItem(conn);
+                if (scheduleEntity == null)
                 {
-                    var scheduleEntity = this._queryService.LockFirstScheduledItem(db);
-                    if (scheduleEntity == null)
-                    {
-                        return false;
-                    }
-                    var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued by Recurring Scheduler", caluculateNext, db);
-                    tran.Complete();
-                    return result;
+                    return false;
                 }
-            }
+                var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued by Recurring Scheduler", caluculateNext, conn);
+                tran.Commit();
+                return result;
+            });
         }
 
-        private bool EnqueueScheduledTaskAndRecalculateNextTime(ScheduleEntity scheduleEntity, string reasonToEnqueue, Func<ScheduledTask, ScheduledTask> caluculateNext, Database db)
+        private bool EnqueueScheduledTaskAndRecalculateNextTime(ScheduleEntity scheduleEntity, string reasonToEnqueue, Func<ScheduledTask, ScheduledTask> caluculateNext, DbConnection connection)
         {
             var scheduledTask = ScheduleEntity.ToScheduleTask(scheduleEntity);
 
@@ -314,7 +299,7 @@ namespace Pulse.SqlStorage
                 scheduledTask = caluculateNext(scheduledTask);
                 scheduleEntity.LastInvocation = scheduledTask.LastInvocation;
                 scheduleEntity.NextInvocation = scheduledTask.NextInvocation;
-                this._queryService.UpdateScheduledItem(scheduleEntity, t => new { t.LastInvocation, t.NextInvocation }, db);
+                this._queryService.UpdateScheduledItem(scheduleEntity, t => new { t.LastInvocation, t.NextInvocation }, connection);
             }
 
             //if job scheduled
@@ -322,13 +307,13 @@ namespace Pulse.SqlStorage
             {
                 var insertedJob = JobEntity.FromScheduleEntity(scheduledTask);
                 insertedJob.ScheduleName = scheduleEntity.Name;
-                var jobId = this._queryService.InsertJob(insertedJob, db);
+                var jobId = this._queryService.InsertJob(insertedJob, connection);
                 var stateId = this._queryService.InsertJobState(
                     StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = scheduledTask.Job.QueueName, Reason = reasonToEnqueue },
                     insertedJob.Id),
-                    db);
-                this._queryService.SetJobState(jobId, stateId, EnqueuedState.DefaultName, db);
-                this._queryService.InsertJobToQueue(jobId, scheduledTask.Job.QueueName, db);
+                    connection);
+                this._queryService.SetJobState(jobId, stateId, EnqueuedState.DefaultName, connection);
+                this._queryService.InsertJobToQueue(jobId, scheduledTask.Job.QueueName, connection);
                 return true;
             }
             //if workflow scheduled
@@ -342,7 +327,7 @@ namespace Pulse.SqlStorage
                         state: rootJobs.ContainsKey(workflowJob.TempId) ?
                             new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = reasonToEnqueue } as IState
                             : new AwaitingState() { Reason = "Waiting for other job/s to finish.", CreatedAt = DateTime.UtcNow } as IState,
-                        db: db
+                        connection: connection
                         );
                 });
                 return true;
@@ -355,46 +340,38 @@ namespace Pulse.SqlStorage
 
         public override int CreateOrUpdateRecurringTask(ScheduledTask job)
         {
-            using (var db = GetDatabase())
+            return UseTransaction<int>((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    var result = this._queryService.CreateOrUpdateRecurringJob(job, db);
-                    tran.Complete();
-                    return result;
-                }
-            }
+                var result = this._queryService.CreateOrUpdateRecurringJob(job, conn);
+                tran.Commit();
+                return result;
+            });
+            
         }
 
-        public override int RemoveScheduledItem(string name)
+        public override bool RemoveScheduledItem(string name)
         {
-            using (var db = GetDatabase())
+            return UseTransaction((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    var result = this._queryService.RemoveScheduledItem(name, db);
-                    tran.Complete();
-                    return result;
-                }
-            }
+                var result = this._queryService.RemoveScheduledItem(name, conn);
+                tran.Commit();
+                return result;
+            });
         }
+    
 
         public override void TriggerScheduledJob(string name)
         {
-            using (var db = GetDatabase())
+            UseTransaction((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    var scheduleEntity = this._queryService.LockScheduledItem(name, db);
+                var scheduleEntity = this._queryService.LockScheduledItem(name, conn);
                     if (scheduleEntity == null)
                     {
                         return;
                     }
-                    var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued because scheduled job was triggered manually.", caluculateNext: null, db: db);
-                    tran.Complete();
-                    return;
-                }
-            }
+                    var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued because scheduled job was triggered manually.", caluculateNext: null, connection: conn);
+                tran.Commit();
+            });
         }
         #endregion
 
@@ -402,63 +379,53 @@ namespace Pulse.SqlStorage
         
         public override void CreateAndEnqueueWorkflow(Workflow workflow)
         {
-            using (var db = GetDatabase())
+            UseTransaction((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    var rootJobs = workflow.GetRootJobs().ToDictionary(t => t.TempId, null);
+                var rootJobs = workflow.GetRootJobs().ToDictionary(t => t.TempId, null);
                     workflow.SaveWorkflow((workflowJob) => {
                         return CreateAndEnqueueJob(
                             queueJob: workflowJob.QueueJob,
                             state: rootJobs.ContainsKey(workflowJob.TempId) ?
                                 new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = "Automatically enqueued as part of workflow because not parent jobs to wait for." } as IState
                                 : new AwaitingState() { Reason = "Waiting for other job/s to finish.", CreatedAt = DateTime.UtcNow } as IState,
-                            db: db
+                            connection: conn
                             );
                     });
-
-                    tran.Complete();
-                }
-            }
+                tran.Commit();
+            });
         }
 
         public override void EnqueueAwaitingWorkflowJobs(int finishedJobId)
         {
-            using (var db = GetDatabase())
+            UseTransaction((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
+                var nextJobs = this._queryService.MarkAsFinishedAndGetNextJobs(finishedJobId, conn);
+                foreach (var job in nextJobs)
                 {
-                    var nextJobs = this._queryService.MarkAsFinishedAndGetNextJobs(finishedJobId, db);
-                    foreach (var job in nextJobs)
-                    {
-                        var stateId = this._queryService.InsertJobState(
-                                                    StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = job.Queue, Reason = "Job enqueued after awaited job successfully finished." },
-                                                    job.Id),
-                                                    db);
-                        this._queryService.SetJobState(job.Id, stateId, EnqueuedState.DefaultName, db);
-                        this._queryService.InsertJobToQueue(job.Id, job.Queue, db);
-                    }
-                    tran.Complete();
+                    var stateId = this._queryService.InsertJobState(
+                                                StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = job.Queue, Reason = "Job enqueued after awaited job successfully finished." },
+                                                job.Id),
+                                                conn);
+                    this._queryService.SetJobState(job.Id, stateId, EnqueuedState.DefaultName, conn);
+                    this._queryService.InsertJobToQueue(job.Id, job.Queue, conn);
                 }
-            }
+                tran.Commit();
+            });
         }
         
         public override void MarkConsequentlyFailedJobs(int failedJobId)
         {
-            using (var db = GetDatabase())
+            UseTransaction((conn, tran) =>
             {
-                using (var tran = db.GetTransaction(IsolationLevel.ReadCommitted))
-                {
-                    var dependentJobs = this._queryService.GetDependentWorkflowTree(failedJobId, db);
+                var dependentJobs = this._queryService.GetDependentWorkflowTree(failedJobId, conn);
                     var state = new ConsequentlyFailed("Job marked as failed because one of jobs this job depends on has failed.", failedJobId);
                     foreach (var job in dependentJobs)
                     {
-                        var stateId = this._queryService.InsertJobState(StateEntity.FromIState(state, job.Id), db);
-                        this._queryService.SetJobState(job.Id, stateId, state.Name, db);
+                        var stateId = this._queryService.InsertJobState(StateEntity.FromIState(state, job.Id), conn);
+                        this._queryService.SetJobState(job.Id, stateId, state.Name, conn);
                     }
-                    tran.Complete();
-                }
-            }
+                tran.Commit();
+            });
         }
 
         #endregion
@@ -470,14 +437,87 @@ namespace Pulse.SqlStorage
 
         #region Helpers
 
+        internal void UseConnection(Action<DbConnection> action)
+        {
+            UseConnection(connection =>
+            {
+                action(connection);
+                return true;
+            });
+        }
+
+        internal T UseConnection<T>(Func<DbConnection, T> func)
+        {
+            DbConnection connection = null;
+
+            try
+            {
+                connection = CreateAndOpenConnection();
+                return func(connection);
+            }
+            finally
+            {
+                ReleaseConnection(connection);
+            }
+        }
+
+        internal void UseTransaction(Action<DbConnection, DbTransaction> action)
+        {
+            UseTransaction((connection, transaction) =>
+            {
+                action(connection, transaction);
+                return true;
+            }, null);
+        }
+
+        internal T UseTransaction<T>(Func<DbConnection, DbTransaction, T> func, IsolationLevel? isolationLevel = null)
+        {
+            using (var transaction = CreateTransaction(isolationLevel ?? IsolationLevel.ReadCommitted))
+            {
+                var result = UseConnection(connection =>
+                {
+                    connection.EnlistTransaction(Transaction.Current);
+                    return func(connection, null);
+                });
+
+                transaction.Complete();
+
+                return result;
+            }
+        }
+
+        private TransactionScope CreateTransaction(IsolationLevel? isolationLevel)
+        {
+            return isolationLevel != null
+                ? new TransactionScope(TransactionScopeOption.Required,
+                    new TransactionOptions { IsolationLevel = isolationLevel.Value, Timeout = _options.TransactionTimeout })
+                : new TransactionScope();
+        }
+
         private void Initialize()
         {
             if (_options.PrepareSchemaIfNecessary)
             {
-                using (var db = GetDatabase())
+                UseConnection(connection =>
                 {
-                    SqlServerObjectsInstaller.Install(db, _options.SchemaName);
-                };
+                    SqlServerObjectsInstaller.Install(connection, _options.SchemaName);
+                });                              
+            }
+        }
+
+        internal DbConnection CreateAndOpenConnection()
+        {
+            var connection = new SqlConnection(GetConnectionString(_connectionStringName));
+            connection.Open();
+
+            return connection;
+        }
+
+        internal void ReleaseConnection(System.Data.IDbConnection connection)
+        {
+            if (connection != null)
+            {
+                connection.Dispose();
             }
         }
 
@@ -510,16 +550,8 @@ namespace Pulse.SqlStorage
 
         public override void Dispose()
         {
-            //if (this._database != null)
-            //{
-            //    this._database.Dispose();
-            //}
         }
-
-        internal Database GetDatabase(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
-        {
-            return CustomDatabaseFactory.DbFactory.GetDatabase();
-        }
+        
         #endregion
 
     }

@@ -10,7 +10,7 @@ using Pulse.Core.Server;
 namespace Pulse.Core.Test
 {
     
-    [TestClass]
+    //[TestClass]
     public class FakeTest
     {
         [TestMethod]

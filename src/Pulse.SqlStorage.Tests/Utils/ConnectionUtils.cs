@@ -1,6 +1,7 @@
-﻿using NPoco;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -38,19 +39,20 @@ namespace Pulse.SqlStorage.Tests.Utils
                    ?? DefaultConnectionStringTemplate;
         }
 
-        public static Database GetDatabaseConnection()
+        public static SqlConnection GetDatabaseConnection()
         {
-            return new Database(GetConnectionString(), DatabaseType.SqlServer2012, System.Data.IsolationLevel.ReadCommitted, false);
+            var connection = new SqlConnection(GetConnectionString());
+            connection.Open();
+
+            return connection;
         }
 
-        public static Database GetFactoryDatabaseConnection()
+        public static SqlConnection GetMasterConnection()
         {
-            return CustomDatabaseFactory.DbFactory.GetDatabase();
-        }
+            var connection = new SqlConnection(GetMasterConnectionString());
+            connection.Open();
 
-        public static Database GetMasterDatabaseConnection()
-        {
-            return new Database(GetMasterConnectionString(), DatabaseType.SqlServer2012, System.Data.IsolationLevel.ReadCommitted, false);
+            return connection;
         }
     }
 

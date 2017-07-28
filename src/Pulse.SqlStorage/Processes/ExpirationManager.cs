@@ -41,8 +41,7 @@ namespace Pulse.SqlStorage.Processes
                     return;
                 _logger.Log($"Removing outdated records from the '{table}' table...");
 
-                using (var db = _storage.GetDatabase())
-                {
+                _storage.UseConnection((conn) => {
                     try
                     {
                         int affected;
@@ -50,7 +49,7 @@ namespace Pulse.SqlStorage.Processes
                         do
                         {
                             affected = ExecuteNonQuery(
-                                db.Connection,
+                                conn,
                                 GetQuery(_schema, table),
                                 context.CancellationToken,
                                 new SqlParameter("@count", NumberOfRecordsInSinglePass),
@@ -60,9 +59,9 @@ namespace Pulse.SqlStorage.Processes
                     }
                     finally
                     {
-                        
+
                     }
-                }
+                });
 
                 _logger.Log($"Outdated records removed from the '{table}' table.");
             }

@@ -18,6 +18,7 @@ namespace Pulse.SqlStorage
             InvisibilityTimeout = TimeSpan.FromMinutes(30);
             JobExpirationCheckInterval = TimeSpan.FromMinutes(30);
             DefaultJobExpiration = TimeSpan.FromDays(1);
+            TransactionTimeout = TimeSpan.FromMinutes(1);
             PrepareSchemaIfNecessary = true;
             _schemaName = DefaultSchema;
         }
@@ -57,6 +58,10 @@ namespace Pulse.SqlStorage
         /// Time to expire deleted or expired job
         /// </summary>
         public TimeSpan DefaultJobExpiration { get; set; }
+
+        public TimeSpan TransactionTimeout { get; set; }
+
+        public TimeSpan? CommandTimeout { get; set; }
 
         public string SchemaName
         {
