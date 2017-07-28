@@ -133,44 +133,82 @@ namespace Pulse.SqlStorage
         {
             string sql = $@"
 set transaction isolation level read committed;
-select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where StateName = N'{EnqueuedState.DefaultName}';
-select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where StateName = N'{FailedState.DefaultName}';
-select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where StateName = N'{ProcessingState.DefaultName}';
-select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where StateName = N'{ScheduledState.DefaultName}';
-select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where StateName = N'{ConsequentlyFailed.DefaultName}';
-select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where StateName = N'{AwaitingState.DefaultName}';
+select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where State = N'{EnqueuedState.DefaultName}';
+select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where State = N'{FailedState.DefaultName}';
+select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where State = N'{ProcessingState.DefaultName}';
+select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where State = N'{ScheduledState.DefaultName}';
+select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where State = N'{ConsequentlyFailed.DefaultName}';
+select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where State = N'{AwaitingState.DefaultName}';
+select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where State = N'{SucceededState.DefaultName}';
+select count(Id) from [{_storage._options.SchemaName}].Job with (nolock) where State = N'{DeletedState.DefaultName}';
 select count(Id) from [{_storage._options.SchemaName}].Server with (nolock);
-
+select count(Name) from [{_storage._options.SchemaName}].Schedule with (nolock);
 ";
-            //using (var db = _storage.GetDatabase())
-            //{
-            //    db.FetchMultiple<long, long, long, long>
-            //}
-            //    var statistics = UseConnection(connection =>
-            //    {
-            //        var stats = new StatisticsDto();
-            //        using (var multi = connection.QueryMultiple(sql, commandTimeout: _storage.CommandTimeout))
-            //        {
-            //            stats.Enqueued = multi.ReadSingle<int>();
-            //            stats.Failed = multi.ReadSingle<int>();
-            //            stats.Processing = multi.ReadSingle<int>();
-            //            stats.Scheduled = multi.ReadSingle<int>();
 
-            //            stats.Servers = multi.ReadSingle<int>();
+            var statistics = _storage.UseConnection(connection =>
+            {
+                var stats = new StatisticsDto();
+                using (var multi = connection.QueryMultiple(sql, commandTimeout: _storage.CommandTimeout))
+                {
+                    stats.Enqueued = multi.ReadSingle<int>();
+                    stats.Failed = multi.ReadSingle<int>();
+                    stats.Processing = multi.ReadSingle<int>();
+                    stats.Scheduled = multi.ReadSingle<int>();
+                    stats.ConsequentlyFailed = multi.ReadSingle<int>();
+                    stats.Awaiting = multi.ReadSingle<int>();
+                    stats.Succeeded = multi.ReadSingle<int>();
+                    stats.Deleted = multi.ReadSingle<int>();
 
-            //            stats.Succeeded = multi.ReadSingleOrDefault<long?>() ?? 0;
-            //            stats.Deleted = multi.ReadSingleOrDefault<long?>() ?? 0;
+                    stats.Servers = multi.ReadSingle<int>();
 
-            //            stats.Recurring = multi.ReadSingle<int>();
-            //        }
-            //        return stats;
-            //    });
+                    stats.Recurring = multi.ReadSingle<int>();
+                }
+                return stats;
+            });
 
             //statistics.Queues = _storage.QueueProviders
             //    .SelectMany(x => x.GetJobQueueMonitoringApi().GetQueues())
             //    .Count();
 
-            return null;
+            return statistics;
+        }
+
+        public List<JobDto> GetContextJobs(Guid contextId, int from, int count)
+        {
+            var sql = $@";
+with cte as
+(
+  select j.Id, row_number() over(order by j.Id desc) as row_num
+  from[{ _storage._options.SchemaName}].Job j with(nolock)
+  where j.ContextId = @contextId
+)
+select j.*, s.Reason as StateReason, s.Data as StateData
+from[{_storage._options.SchemaName}].Job j with(nolock)
+inner join cte on cte.Id = j.Id
+left join[{_storage._options.SchemaName}].State s with(nolock) on j.StateId = s.Id
+where cte.row_num between @start and @end
+order by j.Id desc
+";
+            return _storage.UseConnection((conn) =>
+            {
+                return conn.Query<TempJob>(sql, new { contextId = contextId, start = @from + 1, end = @from + count })
+                    .ToList()
+                    .Select(t => 
+                        new JobDto()
+                        {
+                            ContextId = t.ContextId,
+                            CreatedAt = t.CreatedAt,
+                            Description = t.Description,
+                            Job = JobHelper.FromJson<InvocationData>(t.InvocationData).Deserialize(),
+                            JobId = t.Id,
+                            ScheduleName = t.ScheduleName,
+                            State = t.State,
+                            StateId = t.StateId,
+                            WorkflowId = t.WorkflowId,
+                            StateReason = t.StateReason
+                        })
+                    .ToList();
+            });
         }
 
         private List<T> GetJobs<T>(string stateName, int from, int count, Func<JobDto, Dictionary<string, string>, T> map)

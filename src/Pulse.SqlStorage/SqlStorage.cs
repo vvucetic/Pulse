@@ -83,7 +83,6 @@ namespace Pulse.SqlStorage
                     State = jobEntity.State,
                     StateId = jobEntity.StateId
                 };
-                tran.Commit();
                 return result;
             });
             
@@ -95,7 +94,6 @@ namespace Pulse.SqlStorage
             {
                 var state = new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = queueJob.QueueName, Reason = "Job enqueued" };
                 var jobId = CreateAndEnqueueJob(queueJob, state, conn);
-                tran.Commit();
                 return jobId;
             });
             
@@ -142,7 +140,6 @@ namespace Pulse.SqlStorage
             {
                 var stateId = _queryService.InsertJobState(StateEntity.FromIState(new DeletedState(), jobId), conn);
                 _queryService.UpdateJob(new JobEntity() { Id = jobId, StateId = stateId, State = DeletedState.DefaultName, ExpireAt = DateTime.UtcNow.Add(_options.DefaultJobExpiration) }, t => new { t.State, t.StateId, t.ExpireAt }, conn);
-                tran.Commit();
             });            
         }
 
@@ -153,7 +150,6 @@ namespace Pulse.SqlStorage
             {
                 var stateId = this._queryService.InsertJobState(StateEntity.FromIState(state, jobId), conn);
                 this._queryService.SetJobState(jobId, stateId, state.Name, conn);
-                tran.Commit();
             });            
         }
         
@@ -167,7 +163,6 @@ namespace Pulse.SqlStorage
                     new JobEntity { Id = jobId, NextRetry = nextRun, RetryCount = retryCount, StateId = stateId, State = scheduledState.Name },
                     t => new { t.RetryCount, t.NextRetry, t.State, t.StateId },
                     conn);
-                tran.Commit();
             });
         }
 
@@ -208,7 +203,6 @@ namespace Pulse.SqlStorage
                 {
                     var stateId = this._queryService.InsertJobState(StateEntity.FromIState(new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = job.Queue, Reason = "Enqueued by DelayedJobScheduler" }, job.JobId), conn);
                     this._queryService.SetJobState(job.JobId, stateId, EnqueuedState.DefaultName, conn);
-                    tran.Commit();
                     return true;
                 }
                 else
@@ -284,7 +278,6 @@ namespace Pulse.SqlStorage
                     return false;
                 }
                 var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued by Recurring Scheduler", caluculateNext, conn);
-                tran.Commit();
                 return result;
             });
         }
@@ -343,10 +336,8 @@ namespace Pulse.SqlStorage
             return UseTransaction<int>((conn, tran) =>
             {
                 var result = this._queryService.CreateOrUpdateRecurringJob(job, conn);
-                tran.Commit();
                 return result;
-            });
-            
+            });            
         }
 
         public override bool RemoveScheduledItem(string name)
@@ -354,23 +345,20 @@ namespace Pulse.SqlStorage
             return UseTransaction((conn, tran) =>
             {
                 var result = this._queryService.RemoveScheduledItem(name, conn);
-                tran.Commit();
                 return result;
             });
-        }
-    
+        }    
 
         public override void TriggerScheduledJob(string name)
         {
             UseTransaction((conn, tran) =>
             {
                 var scheduleEntity = this._queryService.LockScheduledItem(name, conn);
-                    if (scheduleEntity == null)
-                    {
-                        return;
-                    }
-                    var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued because scheduled job was triggered manually.", caluculateNext: null, connection: conn);
-                tran.Commit();
+                if (scheduleEntity == null)
+                {
+                    return;
+                }
+                var result = EnqueueScheduledTaskAndRecalculateNextTime(scheduleEntity, "Enqueued because scheduled job was triggered manually.", caluculateNext: null, connection: conn);
             });
         }
         #endregion
@@ -382,16 +370,15 @@ namespace Pulse.SqlStorage
             UseTransaction((conn, tran) =>
             {
                 var rootJobs = workflow.GetRootJobs().ToDictionary(t => t.TempId, null);
-                    workflow.SaveWorkflow((workflowJob) => {
-                        return CreateAndEnqueueJob(
-                            queueJob: workflowJob.QueueJob,
-                            state: rootJobs.ContainsKey(workflowJob.TempId) ?
-                                new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = "Automatically enqueued as part of workflow because not parent jobs to wait for." } as IState
-                                : new AwaitingState() { Reason = "Waiting for other job/s to finish.", CreatedAt = DateTime.UtcNow } as IState,
-                            connection: conn
-                            );
-                    });
-                tran.Commit();
+                workflow.SaveWorkflow((workflowJob) => {
+                    return CreateAndEnqueueJob(
+                        queueJob: workflowJob.QueueJob,
+                        state: rootJobs.ContainsKey(workflowJob.TempId) ?
+                            new EnqueuedState() { EnqueuedAt = DateTime.UtcNow, Queue = workflowJob.QueueJob.QueueName, Reason = "Automatically enqueued as part of workflow because not parent jobs to wait for." } as IState
+                            : new AwaitingState() { Reason = "Waiting for other job/s to finish.", CreatedAt = DateTime.UtcNow } as IState,
+                        connection: conn
+                        );
+                });
             });
         }
 
@@ -409,7 +396,6 @@ namespace Pulse.SqlStorage
                     this._queryService.SetJobState(job.Id, stateId, EnqueuedState.DefaultName, conn);
                     this._queryService.InsertJobToQueue(job.Id, job.Queue, conn);
                 }
-                tran.Commit();
             });
         }
         
@@ -418,13 +404,12 @@ namespace Pulse.SqlStorage
             UseTransaction((conn, tran) =>
             {
                 var dependentJobs = this._queryService.GetDependentWorkflowTree(failedJobId, conn);
-                    var state = new ConsequentlyFailed("Job marked as failed because one of jobs this job depends on has failed.", failedJobId);
-                    foreach (var job in dependentJobs)
-                    {
-                        var stateId = this._queryService.InsertJobState(StateEntity.FromIState(state, job.Id), conn);
-                        this._queryService.SetJobState(job.Id, stateId, state.Name, conn);
-                    }
-                tran.Commit();
+                var state = new ConsequentlyFailed("Job marked as failed because one of jobs this job depends on has failed.", failedJobId);
+                foreach (var job in dependentJobs)
+                {
+                    var stateId = this._queryService.InsertJobState(StateEntity.FromIState(state, job.Id), conn);
+                    this._queryService.SetJobState(job.Id, stateId, state.Name, conn);
+                }
             });
         }
 

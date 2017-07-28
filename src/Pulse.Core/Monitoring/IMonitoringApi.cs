@@ -25,5 +25,9 @@ namespace Pulse.Core.Monitoring
         List<EnqueuedJobDto> GetEnqueuedJobs(int from, int count);
 
         List<ProcessingJobDto> GetProcessingJobs(int from, int count);
+
+        StatisticsDto GetStatistics();
+
+        List<JobDto> GetContextJobs(Guid contextId, int from, int count);
     }
 }

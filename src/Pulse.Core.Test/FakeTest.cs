@@ -95,18 +95,20 @@ namespace Pulse.Core.Test
         {
             GlobalConfiguration.Configuration.UseSqlServerStorage("db");
 
-            var job1 = WorkflowJob.MakeJob(() => WorkflowMethod("1 task"));
-            var job2 = WorkflowJob.MakeJob(() => WorkflowMethod("2 task"));
-            var job31 = WorkflowJob.MakeJob(() => WorkflowMethod("3.1 task"));
-            var job32 = WorkflowJob.MakeJob(() => WorkflowMethod("3.2 task"));
-            var job321 = WorkflowJob.MakeJob(() => WorkflowMethod("3.2.1 task"));
+            var contextId = Guid.NewGuid();
+
+            var job1 = WorkflowJob.MakeJob(() => WorkflowMethod("1 task"), contextId: contextId);
+            var job2 = WorkflowJob.MakeJob(() => WorkflowMethod("2 task"), contextId: contextId);
+            var job31 = WorkflowJob.MakeJob(() => WorkflowMethod("3.1 task"), contextId: contextId);
+            var job32 = WorkflowJob.MakeJob(() => WorkflowMethod("3.2 task"), contextId: contextId);
+            var job321 = WorkflowJob.MakeJob(() => WorkflowMethod("3.2.1 task"), contextId: contextId);
             var group = WorkflowJobGroup.RunInParallel(
                 job31,
                 job32
                 );
 
-            var job4 = WorkflowJob.MakeJob(() => WorkflowMethod("4 task"));
-            var job5 = WorkflowJob.MakeJob(() => WorkflowMethod("5 task"));
+            var job4 = WorkflowJob.MakeJob(() => WorkflowMethod("4 task"), contextId: contextId);
+            var job5 = WorkflowJob.MakeJob(() => WorkflowMethod("5 task"), contextId: contextId);
 
             job1.ContinueWith(job2);
             job2.ContinueWithGroup(group);
@@ -198,7 +200,7 @@ namespace Pulse.Core.Test
         {
             var sqlStorage = new SqlStorage.SqlStorage("db", new SqlServerStorageOptions { });
             var monitoringApi = sqlStorage.GetMonitoringApi();
-            var jobs = monitoringApi.GetFailedJobs(0, 100);
+            var jobs = monitoringApi.GetContextJobs(new Guid("2AA9E873-B470-45B9-9B49-FDB27030A6E1"), 0, 100);
         }
     }
 }
