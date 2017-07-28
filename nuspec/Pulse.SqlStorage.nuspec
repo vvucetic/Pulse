@@ -21,5 +21,6 @@
     <files>
 		<file src="..\src\Pulse.SqlStorage\bin\Release\Pulse.SqlStorage.dll" target="lib\net452" />
 		<file src="..\src\Pulse.SqlStorage\bin\Release\Pulse.SqlStorage.pdb" target="lib\net452" />
+		<file src="..\src\Pulse.SqlStorage\bin\Release\Dapper.Contrib.dll" target="lib\net452" />
 	</files>
 </package>
