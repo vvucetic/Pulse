@@ -1,5 +1,6 @@
 ﻿using Pulse.Core.Common;
 using Pulse.Core.Log;
+using Pulse.Core.Monitoring;
 using Pulse.Core.Server.Processes;
 using Pulse.Core.Storage;
 using System;
@@ -78,6 +79,11 @@ namespace Pulse.Core.Server
             _processingServer.Dispose();
             _logger.Log("Pulse Server stopped.");
             
+        }
+
+        public IMonitoringApi GetMonitoringApi()
+        {
+            return _storage.GetMonitoringApi();
         }
 
         private IEnumerable<IBackgroundProcess> GetRequiredProcesses(string serverId)
