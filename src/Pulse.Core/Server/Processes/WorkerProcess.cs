@@ -1,6 +1,6 @@
 ﻿using Pulse.Core.Common;
-using Pulse.Core.Events;
 using Pulse.Core.Exceptions;
+using Pulse.Core.Monitoring.Events;
 using Pulse.Core.States;
 using Pulse.Core.Storage;
 using System;
@@ -27,7 +27,7 @@ namespace Pulse.Core.Server.Processes
 
         private readonly TimeSpan _workerFetchIdleSleep;
 
-        private readonly EventManager _eventManager = new EventManager();
+        private readonly EventManager _eventManager;
 
         public WorkerProcess(string[] queues, IBackgroundJobPerformer performer, DataStorage storage, string serverId, TimeSpan workerFetchIdleSleep)
         {
@@ -36,6 +36,7 @@ namespace Pulse.Core.Server.Processes
             this._queues = queues ?? throw new ArgumentNullException(nameof(queues));
             this._performer = performer ?? throw new ArgumentNullException(nameof(performer));
             this._storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            this._eventManager = new EventManager(this._storage.GetMonitoringApi());
             this._workerFetchIdleSleep = workerFetchIdleSleep;
             RegisterWorker();
         }

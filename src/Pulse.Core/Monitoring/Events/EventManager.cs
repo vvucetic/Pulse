@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Pulse.Core.Events
+namespace Pulse.Core.Monitoring.Events
 {
     public class EventManager
     {
@@ -14,11 +14,18 @@ namespace Pulse.Core.Events
 
         private readonly ILog Logger = LogProvider.GetLogger();
 
+        private IMonitoringApi _monitoringApi;
+
+        public EventManager(IMonitoringApi monitoringApi)
+        {
+            _monitoringApi = monitoringApi ?? throw new ArgumentNullException(nameof(monitoringApi));
+        }
+
         public void RaiseOnReschedule(QueueJob queueJob, string serverId, string workerId, Exception failException, DateTime nextRun)
         {
             try
             {
-                _eventSubscriber.OnReschedule(queueJob, serverId, workerId, failException, nextRun);
+                _eventSubscriber.OnReschedule(_monitoringApi, queueJob, serverId, workerId, failException, nextRun);
             }
             catch (Exception ex)
             {
@@ -30,7 +37,7 @@ namespace Pulse.Core.Events
         {
             try
             {
-                _eventSubscriber.OnFail(queueJob, serverId, workerId, failException);
+                _eventSubscriber.OnFail(_monitoringApi, queueJob, serverId, workerId, failException);
             }
             catch (Exception ex)
             {
@@ -42,7 +49,7 @@ namespace Pulse.Core.Events
         {
             try
             {
-                _eventSubscriber.OnSuccess(queueJob, serverId, workerId);
+                _eventSubscriber.OnSuccess(_monitoringApi, queueJob, serverId, workerId);
             }
             catch (Exception ex)
             {
@@ -54,7 +61,7 @@ namespace Pulse.Core.Events
         {
             try
             {
-                _eventSubscriber.OnProcessing(queueJob, serverId, workerId);
+                _eventSubscriber.OnProcessing(_monitoringApi, queueJob, serverId, workerId);
             }
             catch (Exception ex)
             {
