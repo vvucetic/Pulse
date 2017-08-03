@@ -19,7 +19,7 @@ namespace Pulse.SqlStorage.Processes
 
         private static readonly string[] ProcessedTables =
         {
-           "Schedule",
+           //"Schedule",
             "Job"
         };
 

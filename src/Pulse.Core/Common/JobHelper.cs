@@ -17,19 +17,30 @@ namespace Pulse.Core.Common
         //{
         //    _serializerSettings = setting;
         //}
+        public static JsonSerializerSettings GetDefaultSettings()
+        {
+            var jsonSerializerSettings = JsonConvert.DefaultSettings != null ? JsonConvert.DefaultSettings() : new JsonSerializerSettings();
+            if (jsonSerializerSettings != null)
+            {
+                if (jsonSerializerSettings.Converters == null)
+                    jsonSerializerSettings.Converters = new List<JsonConverter>();
+                jsonSerializerSettings.Converters.Add(new JobConverter());
+            }
+            return jsonSerializerSettings;
+        }
 
         public static string ToJson(object value)
         {
             return value != null
-                ? JsonConvert.SerializeObject(value, new JobConverter())
+                ? JsonConvert.SerializeObject(value, GetDefaultSettings())
                 : null;
         }
 
         public static T FromJson<T>(string value)
         {
             return value != null
-                ? JsonConvert.DeserializeObject<T>(value, new JobConverter())
-                : default(T);
+                ? JsonConvert.DeserializeObject<T>(value, GetDefaultSettings())
+                : default(T);            
         }
 
         public static object FromJson(string value, Type type)
@@ -37,7 +48,7 @@ namespace Pulse.Core.Common
             if (type == null) throw new ArgumentNullException(nameof(type));
 
             return value != null
-                ? JsonConvert.DeserializeObject(value, type, new JobConverter())
+                ? JsonConvert.DeserializeObject(value, type, GetDefaultSettings())
                 : null;
         }
 
