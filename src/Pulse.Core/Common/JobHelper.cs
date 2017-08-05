@@ -17,29 +17,29 @@ namespace Pulse.Core.Common
         //{
         //    _serializerSettings = setting;
         //}
-        public static JsonSerializerSettings GetDefaultSettings()
-        {
-            var jsonSerializerSettings = JsonConvert.DefaultSettings != null ? JsonConvert.DefaultSettings() : new JsonSerializerSettings();
-            if (jsonSerializerSettings != null)
-            {
-                if (jsonSerializerSettings.Converters == null)
-                    jsonSerializerSettings.Converters = new List<JsonConverter>();
-                jsonSerializerSettings.Converters.Add(new JobConverter());
-            }
-            return jsonSerializerSettings;
-        }
+        //public static JsonSerializerSettings GetDefaultSettings()
+        //{
+            //var jsonSerializerSettings = JsonConvert.DefaultSettings != null ? JsonConvert.DefaultSettings() : new JsonSerializerSettings();
+            //if (jsonSerializerSettings != null)
+            //{
+            //    if (jsonSerializerSettings.Converters == null)
+            //        jsonSerializerSettings.Converters = new List<JsonConverter>();
+            //    jsonSerializerSettings.Converters.Add(new JobConverter());
+            //}
+            //return jsonSerializerSettings;
+        //}
 
         public static string ToJson(object value)
         {
             return value != null
-                ? JsonConvert.SerializeObject(value, GetDefaultSettings())
+                ? JsonConvert.SerializeObject(value, new JobConverter())
                 : null;
         }
 
         public static T FromJson<T>(string value)
         {
             return value != null
-                ? JsonConvert.DeserializeObject<T>(value, GetDefaultSettings())
+                ? JsonConvert.DeserializeObject<T>(value, new JobConverter())
                 : default(T);            
         }
 
@@ -48,7 +48,7 @@ namespace Pulse.Core.Common
             if (type == null) throw new ArgumentNullException(nameof(type));
 
             return value != null
-                ? JsonConvert.DeserializeObject(value, type, GetDefaultSettings())
+                ? JsonConvert.DeserializeObject(value, type, new JobConverter())
                 : null;
         }
 

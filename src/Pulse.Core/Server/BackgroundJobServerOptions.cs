@@ -21,7 +21,7 @@ namespace Pulse.Core.Server
             WorkerCount = Math.Min(Environment.ProcessorCount * 5, MaxDefaultWorkerCount);
             Queues = new[] { EnqueuedState.DefaultQueue };
             //ShutdownTimeout = BackgroundProcessingServer.DefaultShutdownTimeout;
-            //SchedulePollingInterval = DelayedJobScheduler.DefaultPollingDelay;
+            SchedulePollingInterval = DelayedJobSchedulerProcess.DefaultPollingDelay;
             HeartbeatInterval = ServerHeartbeatProcess.DefaultHeartbeatInterval;
             ServerTimeout = ServerWatchdogProcess.DefaultServerTimeout;
             ServerCheckInterval = ServerWatchdogProcess.DefaultCheckInterval;
